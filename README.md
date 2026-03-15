@@ -45,3 +45,17 @@ La lógica de estos agentes se basa en un modelo de **Memoria Externa y Gestión
 1.  Importa los archivos `.json` en tu panel de n8n.
 2.  Configura las **Credentials** para Google Cloud, Telegram e Instagram.
 3.  Asegúrate de que las IDs de las hojas de cálculo en los nodos de Sheets coincidan con tus archivos locales.
+
+### 🏗️ Arquitectura del Sistema
+
+```mermaid
+graph TD
+    User((Usuario/Admin)) -->|Puerto 80/443| Caddy[Caddy Server]
+    User -->|VPN| WG[WireGuard]
+    
+    subgraph "Docker Stack"
+        Caddy -->|Proxy| n8n[n8n Automation]
+        n8n -->|Memoria| GS[Google Sheets]
+        n8n -->|Tickets| Agent[Agente IA]
+    end
+
