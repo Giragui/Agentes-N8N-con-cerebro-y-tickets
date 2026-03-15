@@ -1,4 +1,4 @@
-AGENTES CREADOS POR MI PARA COMPARTIR CON LA MUCHACHADA! 2026
+AGENTES CREADOS POR MI PARA COMPARTIR CON LA MUCHACHADA! 2026 - 
 
 [![n8n](https://img.shields.io/badge/n8n-FF6C37?style=for-the-badge&logo=n8n&logoColor=white)](https://n8n.io/)
 [![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
