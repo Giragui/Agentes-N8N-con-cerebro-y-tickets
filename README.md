@@ -7,7 +7,7 @@ AGENTES CREADOS POR MI PARA COMPARTIR CON LA MUCHACHADA! 2026
 
 # Ecosistema de Agentes IA con n8n 🤖🚀
 
-Este repositorio contiene una colección de flujos de trabajo (workflows) de **n8n** diseñados para la automatización de comunidades, soporte técnico y gestión de contenidos, integrando modelos de IA con bases de datos dinámicas.
+Este repositorio contiene una colección de flujos de trabajo (workflows) de **n8n** diseñados para la automatización de comunidades, soporte técnico y gestión de contenidos, integrando modelos de IA con bases de datos dinámicas. (en el archivo .json esta la totalidad de los agentes, en los TXT dentro de la carpeta N8N workflows tengo los agentes separados.) "SALUDOS ESPERO Q TE SIRBA BRO"
 
 ## 🧠 Arquitectura de los Agentes
 
