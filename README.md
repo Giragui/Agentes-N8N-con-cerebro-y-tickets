@@ -1,8 +1,10 @@
 AGENTES CREADOS POR MI PARA COMPARTIR CON LA MUCHACHADA! 2026
+
 [![n8n](https://img.shields.io/badge/n8n-FF6C37?style=for-the-badge&logo=n8n&logoColor=white)](https://n8n.io/)
 [![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 [![JSON](https://img.shields.io/badge/JSON-000000?style=for-the-badge&logo=json&logoColor=white)](https://www.json.org/json-en.html)
 [![GitHub License](https://img.shields.io/github/license/Giragui/Agentes-N8N-con-cerebro-y-tickets?style=for-the-badge)](https://github.com/Giragui/Agentes-N8N-con-cerebro-y-tickets/blob/main/LICENSE.txt)
+
 # Ecosistema de Agentes IA con n8n 🤖🚀
 
 Este repositorio contiene una colección de flujos de trabajo (workflows) de **n8n** diseñados para la automatización de comunidades, soporte técnico y gestión de contenidos, integrando modelos de IA con bases de datos dinámicas.
