@@ -1,0 +1,200 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -368,
+        -32
+      ],
+      "id": "03c71a0a-2cb2-4f8e-b8ff-b7d026547085",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://hnrss.org/newest",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -32,
+        96
+      ],
+      "id": "1e2c1fb5-e317-43b5-9f8f-c694ba8963aa",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "url": "https://www.reddit.com/r/programming/.rss",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -32,
+        -144
+      ],
+      "id": "e7697d88-4bcd-42c3-a6b7-be7bcd71ea84",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "data",
+              "renameField": true,
+              "outputFieldName": "hackernews"
+            },
+            {
+              "fieldToAggregate": "data",
+              "renameField": true,
+              "outputFieldName": "reddit"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        224,
+        -16
+      ],
+      "id": "67960db3-da70-49c6-bf9b-0fab7429a92e",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3-flash-preview",
+          "mode": "list",
+          "cachedResultName": "models/gemini-3-flash-preview"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Actúa como un curador de noticias para desarrolladores\n\nrecibirás una lista de noticias de Hacker News y Reddit.\nPara cada noticia:\n\n-Decide si es ÚTIL o DESCARTABLE.\n-Prioriza las que aportan aprendizaje, valor técnico.\no crecimiento profesional.\n-Evita drama, clickbait y ruido.\nPara las noticias ÚTILES: \n-Resume en 2-3 líneas.\n-Explica brevemente porque vale la pena leerla.\n-Añade un comentario practico y motivador.\nPara las descartadas:\n-Indica en una línea por qué se descartan.\n\nDevuelve solo las noticias útiles ordenadas por relevancia. El formato de salida debe ser exclusivamente html, este será enviado por correo electrónico.\nSolo responde en html\n\n {{ $json.hackernews }}\n {{ $json.reddit }}\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        432,
+        -16
+      ],
+      "id": "4d5385b1-b341-436e-8020-46e5bc891124",
+      "name": "Message a model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YEGj3HYtTly91ene",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "giragui28@gmail.com",
+        "subject": "Resumen de Noticias Des",
+        "message": "=Hola son las novedades de desarrolladores que me pediste.\n {{ $json.content.parts[0].text }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        784,
+        -16
+      ],
+      "id": "b5ceb30a-f387-4ba7-8093-a13ffb3101e1",
+      "name": "Send a message",
+      "webhookId": "f2a080ff-ffa5-490a-85ae-bfa881d1c882",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "9z8lq17ehcF6ypn6",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3b88cded59cd6d01a088b04b49703440386031617c080194decfb781477eed23"
+  }
+}

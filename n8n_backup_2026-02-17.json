@@ -1,0 +1,4405 @@
+[
+  {
+    "updatedAt": "2026-01-31T02:00:55.737Z",
+    "createdAt": "2026-01-30T00:13:15.259Z",
+    "id": "1s0FoR3Draz4jlkx7tRQe",
+    "name": "whats app agent  para clientes",
+    "active": false,
+    "isArchived": false,
+    "nodes": [
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "={{ $json.finalPrompt }}\n\n\n",
+          "hasOutputParser": true,
+          "options": {
+            "systemMessage": "You are [Company]’s support assistant for Black Ball Sporting Club.\n• Do NOT include any preamble such as “Based on the document you provided” or “Okay, [Name].” Just jump straight to the answer.\n* don't ever start your response with\"based on the document you provided\" , or \"According to the document\", don't mention any documents at all , also don't mention today's date unless you asked\n"
+          }
+        },
+        "id": "f2bd2c36-fa0c-409f-9e22-6dd9f46c219a",
+        "name": "AI Agent",
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "maxTries": 5,
+        "position": [
+          1040,
+          448
+        ],
+        "retryOnFail": false,
+        "typeVersion": 1.7,
+        "alwaysOutputData": true,
+        "waitBetweenTries": null
+      },
+      {
+        "parameters": {
+          "jsCode": "// cleanAnswer – run once per item\nlet txt = $('AI Agent').first().json.output || '';\n\n// 1. Remove bold / italic / strike markers\ntxt = txt.replace(/[*_~]+/g, '');\n\n// 2. Convert [Texto](https://url) → Texto https://url\ntxt = txt.replace(/\\[([^\\]]+)\\]\\((https?:\\/\\/[^\\s)]+)\\)/g, '$1 $2');\n\n// 3. Collapse 3+ blank lines\ntxt = txt.replace(/\\n{3,}/g, '\\n\\n').trim();\n\n// 4. Remove the unwanted source-reference preamble\ntxt = txt.replace(/^.*?based on the document you provided[,:]?\\s*/i, '');\n\nreturn [{ json: { answer: txt } }];\n"
+        },
+        "id": "296ec26b-1be2-40b6-954b-5079204e33c0",
+        "name": "cleanAnswer",
+        "type": "n8n-nodes-base.code",
+        "position": [
+          2304,
+          352
+        ],
+        "typeVersion": 2
+      },
+      {
+        "parameters": {
+          "jsCode": "// within24h?  – run once per item\n// Meta (WhatsApp) timestamp arrives as seconds since epoch\nconst lastTs = Number($('when message received').first().json.messages[0].timestamp) * 1000;   // → ms\nconst withinWindow = Date.now() - lastTs < 24 * 60 * 60 * 1000;\n\nreturn [{ json: { withinWindow, answer: $json.answer, userId: $json.userId } }];"
+        },
+        "id": "045cb57b-f990-4815-a943-c686449652d3",
+        "name": "24-hour window check",
+        "type": "n8n-nodes-base.code",
+        "position": [
+          1872,
+          448
+        ],
+        "typeVersion": 2
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "version": 2,
+              "leftValue": "",
+              "caseSensitive": true,
+              "typeValidation": "strict"
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "d33e218e-a49a-49ed-9c6b-55b9ea0b0dbb",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                },
+                "leftValue": "={{ $json.withinWindow }}",
+                "rightValue": ""
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "ff6f92e9-37f7-45b1-9e9e-0e5177c72932",
+        "name": "If",
+        "type": "n8n-nodes-base.if",
+        "position": [
+          2080,
+          448
+        ],
+        "typeVersion": 2.2
+      },
+      {
+        "parameters": {
+          "phoneNumberId": "641448739058783",
+          "recipientPhoneNumber": "={{ $('when message received').item.json.contacts[0].wa_id }}",
+          "template": "hello_world|en_US"
+        },
+        "id": "62f08bc9-8135-4211-924d-f8bb37af381a",
+        "name": "Send Pre-approved Template Message to Reopen the Conversation",
+        "type": "n8n-nodes-base.whatsApp",
+        "position": [
+          2304,
+          544
+        ],
+        "webhookId": "ef6de86f-66df-4586-bd75-2056626d5474",
+        "typeVersion": 1,
+        "credentials": {
+          "whatsAppApi": {
+            "id": "gNKY5bCcpnuBEVpG",
+            "name": "WhatsApp account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "send",
+          "phoneNumberId": "=641448739058783",
+          "recipientPhoneNumber": "={{ $('when message received').item.json.contacts[0].wa_id }}",
+          "textBody": "={{ $json.answer }}",
+          "additionalFields": {}
+        },
+        "id": "c8090bc6-efc5-4fa0-b613-9b65a2acae89",
+        "name": "Send AI Agent's Answer",
+        "type": "n8n-nodes-base.whatsApp",
+        "position": [
+          2528,
+          352
+        ],
+        "webhookId": "8da6eeda-31ec-448a-9d75-2d5dbc5f10f9",
+        "typeVersion": 1,
+        "credentials": {
+          "whatsAppApi": {
+            "id": "gNKY5bCcpnuBEVpG",
+            "name": "WhatsApp account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "modelName": "models/gemini-2.5-flash-preview-04-17-thinking",
+          "options": {}
+        },
+        "id": "be77606c-b6f4-400a-94cb-ae63091c70cc",
+        "name": "Google Gemini Chat Model",
+        "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+        "position": [
+          1008,
+          672
+        ],
+        "typeVersion": 1
+      },
+      {
+        "parameters": {
+          "instructions": "Write code to:\n• Get today’s date formatted “Month Day, Year”\n• Extract the Google Doc’s plain text by joining its body.content textRuns\n• Extract the WhatsApp message from messages[0].text.body\n• Build a field finalPrompt exactly as:\n\nvbnet\nCopy\nEdit\nToday's date is: [date]\n\n[doc text]\n\nUser's question:\n[body]\n• Return finalPrompt only.",
+          "codeGeneratedForPrompt": "Write code to:\n• Get today’s date formatted “Month Day, Year”\n• Extract the Google Doc’s plain text by joining its body.content textRuns\n• Extract the WhatsApp message from messages[0].text.body\n• Build a field finalPrompt exactly as:\n\nvbnet\nCopy\nEdit\nToday's date is: [date]\n\n[doc text]\n\nUser's question:\n[body]\n• Return finalPrompt only.",
+          "jsCode": "const googleDocs = $input.all().map((item) => item.json);\nconst whatsappMessages = $(\"when message received\")\n  .all()\n  .map((item) => item.json);\n\nconst date = new Date();\nconst formattedDate = `${date.getMonth() + 1} ${date.getDate()}, ${date.getFullYear()}`;\n\nconst docText = googleDocs[0].content.split(\"\\n\").join(\" \");\n\nconst body = whatsappMessages[0].messages[0].text.body;\n\nconst finalPrompt = `Today's date is: ${formattedDate}\\n\\n${docText}\\n\\nUser's question:\\n${body}`;\n\nreturn { finalPrompt };\n"
+        },
+        "id": "a4ad4bc6-4cc1-469d-959e-1d177ae272df",
+        "name": "Prepare Prompt",
+        "type": "n8n-nodes-base.aiTransform",
+        "position": [
+          832,
+          448
+        ],
+        "typeVersion": 1
+      },
+      {
+        "parameters": {
+          "operation": "appendOrUpdate",
+          "documentId": {
+            "__rl": true,
+            "mode": "list",
+            "value": "1Ub8QIhGPOm1G4ylaM48iMAous1zvBO3YDl-38AKDuFw",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Ub8QIhGPOm1G4ylaM48iMAous1zvBO3YDl-38AKDuFw/edit?usp=drivesdk",
+            "cachedResultName": "Chat Logs"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "list",
+            "value": "gid=0",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Ub8QIhGPOm1G4ylaM48iMAous1zvBO3YDl-38AKDuFw/edit#gid=0",
+            "cachedResultName": "Sheet1"
+          },
+          "columns": {
+            "value": {
+              "User": "={{ $('when message received').item.json.messages[0].from }}",
+              "Message": "={{ $('when message received').item.json.messages[0].text.body }}",
+              "Response": "={{ $('AI Agent').item.json.output }}",
+              "Timestamp": "={{ $json.currentDate }}"
+            },
+            "schema": [
+              {
+                "id": "Timestamp",
+                "type": "string",
+                "display": true,
+                "removed": false,
+                "required": false,
+                "displayName": "Timestamp",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "User",
+                "type": "string",
+                "display": true,
+                "required": false,
+                "displayName": "User",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Message",
+                "type": "string",
+                "display": true,
+                "required": false,
+                "displayName": "Message",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Response",
+                "type": "string",
+                "display": true,
+                "required": false,
+                "displayName": "Response",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Column 5",
+                "type": "string",
+                "display": true,
+                "removed": false,
+                "required": false,
+                "displayName": "Column 5",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Column 6",
+                "type": "string",
+                "display": true,
+                "removed": false,
+                "required": false,
+                "displayName": "Column 6",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Column 7",
+                "type": "string",
+                "display": true,
+                "removed": false,
+                "required": false,
+                "displayName": "Column 7",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Column 8",
+                "type": "string",
+                "display": true,
+                "removed": false,
+                "required": false,
+                "displayName": "Column 8",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Column 9",
+                "type": "string",
+                "display": true,
+                "removed": false,
+                "required": false,
+                "displayName": "Column 9",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Column 10",
+                "type": "string",
+                "display": true,
+                "removed": false,
+                "required": false,
+                "displayName": "Column 10",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Column 11",
+                "type": "string",
+                "display": true,
+                "removed": false,
+                "required": false,
+                "displayName": "Column 11",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Column 12",
+                "type": "string",
+                "display": true,
+                "removed": false,
+                "required": false,
+                "displayName": "Column 12",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Column 13",
+                "type": "string",
+                "display": true,
+                "removed": false,
+                "required": false,
+                "displayName": "Column 13",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Column 14",
+                "type": "string",
+                "display": true,
+                "removed": false,
+                "required": false,
+                "displayName": "Column 14",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Column 15",
+                "type": "string",
+                "display": true,
+                "removed": false,
+                "required": false,
+                "displayName": "Column 15",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Column 16",
+                "type": "string",
+                "display": true,
+                "removed": false,
+                "required": false,
+                "displayName": "Column 16",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Column 17",
+                "type": "string",
+                "display": true,
+                "removed": false,
+                "required": false,
+                "displayName": "Column 17",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Column 18",
+                "type": "string",
+                "display": true,
+                "removed": false,
+                "required": false,
+                "displayName": "Column 18",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Column 19",
+                "type": "string",
+                "display": true,
+                "removed": false,
+                "required": false,
+                "displayName": "Column 19",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Column 20",
+                "type": "string",
+                "display": true,
+                "removed": false,
+                "required": false,
+                "displayName": "Column 20",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Column 21",
+                "type": "string",
+                "display": true,
+                "removed": false,
+                "required": false,
+                "displayName": "Column 21",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Column 22",
+                "type": "string",
+                "display": true,
+                "removed": false,
+                "required": false,
+                "displayName": "Column 22",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Column 23",
+                "type": "string",
+                "display": true,
+                "removed": false,
+                "required": false,
+                "displayName": "Column 23",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Column 24",
+                "type": "string",
+                "display": true,
+                "removed": false,
+                "required": false,
+                "displayName": "Column 24",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Column 25",
+                "type": "string",
+                "display": true,
+                "removed": false,
+                "required": false,
+                "displayName": "Column 25",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Column 26",
+                "type": "string",
+                "display": true,
+                "removed": false,
+                "required": false,
+                "displayName": "Column 26",
+                "defaultMatch": false,
+                "canBeUsedToMatch": true
+              }
+            ],
+            "mappingMode": "defineBelow",
+            "matchingColumns": [
+              "Timestamp"
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "id": "657b62cc-0aa5-4921-8a19-c2617bc4064c",
+        "name": "Google Sheets",
+        "type": "n8n-nodes-base.googleSheets",
+        "position": [
+          1648,
+          448
+        ],
+        "typeVersion": 4.6
+      },
+      {
+        "parameters": {
+          "options": {}
+        },
+        "id": "042e565e-abff-4ed4-b63c-6f4f5ac7c87b",
+        "name": "Date & Time",
+        "type": "n8n-nodes-base.dateTime",
+        "position": [
+          1424,
+          448
+        ],
+        "typeVersion": 2
+      },
+      {
+        "parameters": {
+          "content": "**Smart WhatsApp AI Assistant Using Google Docs**\n\n📌 What it does:\nAnswers WhatsApp questions instantly using internal document knowledge. No training needed — just update the doc.\n\n📄 Reads a live Google Doc\n💬 Receives WhatsApp messages\n🧠 Crafts AI prompt using today's date + message + doc\n⚡ Uses OpenAI/Gemini to generate a response\n📤 Sends reply back over WhatsApp\n\n🧰 Prerequisites:\n- WhatsApp Business Cloud API account\n- Google Doc with your business content\n- OpenAI or Gemini API \nkey\n- you can setup the postgress memory using the following link:\nhttps://www.youtube.com/watch?v=JjBofKJnYIU\n\n\n🛠 Setup:\n1. Paste your Google Doc ID in the Docs node\n2. Connect WhatsApp Cloud API (Meta)\n3. Map the message field\n4. Connect OpenAI or Gemini\n5. Publish and test with a live message\n\nYou’re done!\n🤝 Need Help Setting It Up?\nIf you'd like help connecting your WhatsApp Business API, setting up Google Docs access, or customizing this AI assistant for your business or clients…\n\n📩 I offer setup, branding, and customization services:\nWhatsApp Cloud API setup & verification\n\nGoogle OAuth & Doc structure guidance\n\nAI model configuration (OpenAI / Gemini)\n\nBranding & prompt tone customization\n\nLogging, reporting, and escalation logic\n\nJust send a message via:\n\nEmail: tharwat.elsayed2000@gmail.com\n\nWhatsApp: +201061803236",
+          "height": 1420
+        },
+        "id": "40d90f79-bec5-47bf-a210-0c0946c1deb7",
+        "name": "Sticky Note",
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          0,
+          0
+        ],
+        "typeVersion": 1
+      },
+      {
+        "parameters": {
+          "operation": "get",
+          "documentURL": "=1Uv1WYCcXNlp-jaeJ7-3MNxWYfPj-wcYnJv4_colXSvk"
+        },
+        "id": "e72f15cf-107f-4ac9-a5dd-ea48a0820bd3",
+        "name": "company's knowledge",
+        "type": "n8n-nodes-base.googleDocs",
+        "position": [
+          608,
+          448
+        ],
+        "typeVersion": 2
+      },
+      {
+        "parameters": {
+          "sessionIdType": "customKey",
+          "sessionKey": "={{ $('when message received').item.json.contacts[0].wa_id }}"
+        },
+        "id": "ce985c5d-c26d-4af9-991f-18299c0f9719",
+        "name": "Simple Memory",
+        "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+        "position": [
+          1120,
+          672
+        ],
+        "typeVersion": 1.3
+      },
+      {
+        "parameters": {
+          "operation": "send",
+          "phoneNumberId": "973883585806267",
+          "recipientPhoneNumber": "+541173657268",
+          "textBody": "Hola soy prueba de Whatsap n8n",
+          "additionalFields": {}
+        },
+        "type": "n8n-nodes-base.whatsApp",
+        "typeVersion": 1.1,
+        "position": [
+          336,
+          448
+        ],
+        "id": "0545a726-4a39-4c36-9e80-086c8f67c943",
+        "name": "Send message",
+        "webhookId": "b3d5a93d-4afc-4591-b8be-e9725ba31841",
+        "credentials": {
+          "whatsAppApi": {
+            "id": "gNKY5bCcpnuBEVpG",
+            "name": "WhatsApp account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "path": "bot-prueba",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          400,
+          192
+        ],
+        "id": "0315befb-52b5-4dbd-8364-6c218bb7be69",
+        "name": "Webhook",
+        "webhookId": "1d87f7a8-6327-4176-942d-47fb44dcf2e4"
+      }
+    ],
+    "connections": {
+      "If": {
+        "main": [
+          [
+            {
+              "node": "cleanAnswer",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Send Pre-approved Template Message to Reopen the Conversation",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "AI Agent": {
+        "main": [
+          [
+            {
+              "node": "Date & Time",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Date & Time": {
+        "main": [
+          [
+            {
+              "node": "Google Sheets",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "cleanAnswer": {
+        "main": [
+          [
+            {
+              "node": "Send AI Agent's Answer",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Google Sheets": {
+        "main": [
+          [
+            {
+              "node": "24-hour window check",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Simple Memory": {
+        "ai_memory": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "ai_memory",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Prompt": {
+        "main": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "company's knowledge": {
+        "main": [
+          [
+            {
+              "node": "Prepare Prompt",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "24-hour window check": {
+        "main": [
+          [
+            {
+              "node": "If",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Google Gemini Chat Model": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Send message": {
+        "main": [
+          [
+            {
+              "node": "company's knowledge",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Send message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1",
+      "availableInMCP": false
+    },
+    "staticData": null,
+    "meta": null,
+    "pinData": {},
+    "versionId": "266c578a-5469-4ea3-8118-6eab2d0b8f3a",
+    "activeVersionId": null,
+    "triggerCount": 0,
+    "shared": [
+      {
+        "updatedAt": "2026-01-30T00:13:15.337Z",
+        "createdAt": "2026-01-30T00:13:15.337Z",
+        "role": "workflow:owner",
+        "workflowId": "1s0FoR3Draz4jlkx7tRQe",
+        "projectId": "3bfyiwZiLwsnaqI0"
+      }
+    ],
+    "activeVersion": null,
+    "tags": []
+  },
+  {
+    "updatedAt": "2026-01-30T22:20:52.921Z",
+    "createdAt": "2025-12-28T02:08:36.480Z",
+    "id": "5y6vbSgDCosh8Qxk",
+    "name": "Metricas Webs",
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+      {
+        "parameters": {
+          "chatId": "1680318803",
+          "text": "=📊 REPORTE DIARIO DE VISITAS\n\n🍄 Docdoco: {{ $json.vistasDocdoco }} visitas. 💻 UronWeb: {{ $json.vistasUronweb }} visitas.\n\n📅 Fecha: {{ $json.fecha }}",
+          "replyMarkup": "=",
+          "forceReply": {},
+          "replyKeyboardOptions": {},
+          "replyKeyboardRemove": {},
+          "additionalFields": {
+            "parse_mode": "Markdown"
+          }
+        },
+        "id": "539ada1c-21fd-4fa1-aeb8-17f6880ac548",
+        "name": "Telegram Reporte",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.1,
+        "position": [
+          688,
+          16
+        ],
+        "webhookId": "e26a8660-a1af-486f-ba12-093fbdd0bb89",
+        "credentials": {
+          "telegramApi": {
+            "id": "TrmkTaUMNEUaBB1m",
+            "name": "Telegram account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// Este script toma la primera entrada y la segunda entrada automáticamente\nconst entrada1 = $input.all()[0]?.json || {};\nconst entrada2 = $input.all()[1]?.json || {};\n\n// Identificamos cuál es cuál basándonos en el Property ID que ya conocemos\n// UronWeb: 516647540 | Docdoco: 516647539\nlet docdoco = {};\nlet uronweb = {};\n\nif (entrada1.propertyId === \"516647539\") {\n  docdoco = entrada1;\n  uronweb = entrada2;\n} else {\n  docdoco = entrada2;\n  uronweb = entrada1;\n}\n\nreturn {\n  fecha: new Date().toLocaleDateString('es-AR'),\n  vistasDocdoco: docdoco.screenPageViews || 0,\n  vistasUronweb: uronweb.screenPageViews || 0\n};"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          416,
+          0
+        ],
+        "id": "4de24eac-912f-4537-ac67-3ea4352fa209",
+        "name": "Code in JavaScript"
+      },
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "triggerAtHour": 22
+              }
+            ]
+          }
+        },
+        "id": "f8d02c7b-f62b-4ee5-97db-b0957b5e8ea2",
+        "name": "Lunes a Viernes 1 PM",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          -272,
+          32
+        ]
+      },
+      {
+        "parameters": {
+          "propertyId": {
+            "__rl": true,
+            "value": "516647539",
+            "mode": "id"
+          },
+          "metricsGA4": {
+            "metricValues": [
+              {
+                "listName": "screenPageViews"
+              }
+            ]
+          },
+          "dimensionsGA4": {
+            "dimensionValues": [
+              {}
+            ]
+          },
+          "returnAll": true,
+          "additionalFields": {}
+        },
+        "type": "n8n-nodes-base.googleAnalytics",
+        "typeVersion": 2,
+        "position": [
+          208,
+          0
+        ],
+        "id": "0af07b1c-edcd-491d-8277-78b118dcd61b",
+        "name": "GA4 Docdoco",
+        "alwaysOutputData": false,
+        "credentials": {
+          "googleAnalyticsOAuth2": {
+            "id": "RpgBJPnrTW0SZAa7",
+            "name": "Google Analytics account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "propertyId": {
+            "__rl": true,
+            "value": "516647540",
+            "mode": "id"
+          },
+          "metricsGA4": {
+            "metricValues": [
+              {
+                "listName": "screenPageViews"
+              }
+            ]
+          },
+          "dimensionsGA4": {
+            "dimensionValues": [
+              {}
+            ]
+          },
+          "returnAll": true,
+          "additionalFields": {}
+        },
+        "type": "n8n-nodes-base.googleAnalytics",
+        "typeVersion": 2,
+        "position": [
+          192,
+          160
+        ],
+        "id": "37e202b3-61e5-4a7b-b180-29fe606f4261",
+        "name": "GA4 UronWeb",
+        "alwaysOutputData": false,
+        "credentials": {
+          "googleAnalyticsOAuth2": {
+            "id": "RpgBJPnrTW0SZAa7",
+            "name": "Google Analytics account"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Code in JavaScript": {
+        "main": [
+          [
+            {
+              "node": "Telegram Reporte",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Lunes a Viernes 1 PM": {
+        "main": [
+          [
+            {
+              "node": "GA4 Docdoco",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "GA4 UronWeb",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "GA4 Docdoco": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "GA4 UronWeb": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": {
+      "node:Lunes 10 AM": {
+        "recurrenceRules": []
+      },
+      "node:Lunes a Viernes 1 PM": {
+        "recurrenceRules": []
+      }
+    },
+    "meta": {
+      "templateCredsSetupCompleted": true
+    },
+    "pinData": {},
+    "versionId": "772c8371-ae15-4fda-92bf-ca23d21d0087",
+    "activeVersionId": "772c8371-ae15-4fda-92bf-ca23d21d0087",
+    "triggerCount": 1,
+    "shared": [
+      {
+        "updatedAt": "2025-12-28T02:08:36.480Z",
+        "createdAt": "2025-12-28T02:08:36.480Z",
+        "role": "workflow:owner",
+        "workflowId": "5y6vbSgDCosh8Qxk",
+        "projectId": "3bfyiwZiLwsnaqI0"
+      }
+    ],
+    "activeVersion": {
+      "updatedAt": "2026-01-30T22:20:55.000Z",
+      "createdAt": "2026-01-30T22:20:52.911Z",
+      "versionId": "772c8371-ae15-4fda-92bf-ca23d21d0087",
+      "workflowId": "5y6vbSgDCosh8Qxk",
+      "nodes": [
+        {
+          "parameters": {
+            "chatId": "1680318803",
+            "text": "=📊 REPORTE DIARIO DE VISITAS\n\n🍄 Docdoco: {{ $json.vistasDocdoco }} visitas. 💻 UronWeb: {{ $json.vistasUronweb }} visitas.\n\n📅 Fecha: {{ $json.fecha }}",
+            "replyMarkup": "=",
+            "forceReply": {},
+            "replyKeyboardOptions": {},
+            "replyKeyboardRemove": {},
+            "additionalFields": {
+              "parse_mode": "Markdown"
+            }
+          },
+          "id": "539ada1c-21fd-4fa1-aeb8-17f6880ac548",
+          "name": "Telegram Reporte",
+          "type": "n8n-nodes-base.telegram",
+          "typeVersion": 1.1,
+          "position": [
+            688,
+            16
+          ],
+          "webhookId": "e26a8660-a1af-486f-ba12-093fbdd0bb89",
+          "credentials": {
+            "telegramApi": {
+              "id": "TrmkTaUMNEUaBB1m",
+              "name": "Telegram account"
+            }
+          }
+        },
+        {
+          "parameters": {
+            "jsCode": "// Este script toma la primera entrada y la segunda entrada automáticamente\nconst entrada1 = $input.all()[0]?.json || {};\nconst entrada2 = $input.all()[1]?.json || {};\n\n// Identificamos cuál es cuál basándonos en el Property ID que ya conocemos\n// UronWeb: 516647540 | Docdoco: 516647539\nlet docdoco = {};\nlet uronweb = {};\n\nif (entrada1.propertyId === \"516647539\") {\n  docdoco = entrada1;\n  uronweb = entrada2;\n} else {\n  docdoco = entrada2;\n  uronweb = entrada1;\n}\n\nreturn {\n  fecha: new Date().toLocaleDateString('es-AR'),\n  vistasDocdoco: docdoco.screenPageViews || 0,\n  vistasUronweb: uronweb.screenPageViews || 0\n};"
+          },
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            416,
+            0
+          ],
+          "id": "4de24eac-912f-4537-ac67-3ea4352fa209",
+          "name": "Code in JavaScript"
+        },
+        {
+          "parameters": {
+            "rule": {
+              "interval": [
+                {
+                  "triggerAtHour": 22
+                }
+              ]
+            }
+          },
+          "id": "f8d02c7b-f62b-4ee5-97db-b0957b5e8ea2",
+          "name": "Lunes a Viernes 1 PM",
+          "type": "n8n-nodes-base.scheduleTrigger",
+          "typeVersion": 1.1,
+          "position": [
+            -272,
+            32
+          ]
+        },
+        {
+          "parameters": {
+            "propertyId": {
+              "__rl": true,
+              "value": "516647539",
+              "mode": "id"
+            },
+            "metricsGA4": {
+              "metricValues": [
+                {
+                  "listName": "screenPageViews"
+                }
+              ]
+            },
+            "dimensionsGA4": {
+              "dimensionValues": [
+                {}
+              ]
+            },
+            "returnAll": true,
+            "additionalFields": {}
+          },
+          "type": "n8n-nodes-base.googleAnalytics",
+          "typeVersion": 2,
+          "position": [
+            208,
+            0
+          ],
+          "id": "0af07b1c-edcd-491d-8277-78b118dcd61b",
+          "name": "GA4 Docdoco",
+          "alwaysOutputData": false,
+          "credentials": {
+            "googleAnalyticsOAuth2": {
+              "id": "RpgBJPnrTW0SZAa7",
+              "name": "Google Analytics account"
+            }
+          }
+        },
+        {
+          "parameters": {
+            "propertyId": {
+              "__rl": true,
+              "value": "516647540",
+              "mode": "id"
+            },
+            "metricsGA4": {
+              "metricValues": [
+                {
+                  "listName": "screenPageViews"
+                }
+              ]
+            },
+            "dimensionsGA4": {
+              "dimensionValues": [
+                {}
+              ]
+            },
+            "returnAll": true,
+            "additionalFields": {}
+          },
+          "type": "n8n-nodes-base.googleAnalytics",
+          "typeVersion": 2,
+          "position": [
+            192,
+            160
+          ],
+          "id": "37e202b3-61e5-4a7b-b180-29fe606f4261",
+          "name": "GA4 UronWeb",
+          "alwaysOutputData": false,
+          "credentials": {
+            "googleAnalyticsOAuth2": {
+              "id": "RpgBJPnrTW0SZAa7",
+              "name": "Google Analytics account"
+            }
+          }
+        }
+      ],
+      "connections": {
+        "Code in JavaScript": {
+          "main": [
+            [
+              {
+                "node": "Telegram Reporte",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Lunes a Viernes 1 PM": {
+          "main": [
+            [
+              {
+                "node": "GA4 Docdoco",
+                "type": "main",
+                "index": 0
+              },
+              {
+                "node": "GA4 UronWeb",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "GA4 Docdoco": {
+          "main": [
+            [
+              {
+                "node": "Code in JavaScript",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "GA4 UronWeb": {
+          "main": [
+            [
+              {
+                "node": "Code in JavaScript",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "authors": "Gastón Iragui",
+      "name": "Version 772c8371",
+      "description": "",
+      "autosaved": false
+    },
+    "tags": []
+  },
+  {
+    "updatedAt": "2026-01-14T17:05:43.925Z",
+    "createdAt": "2026-01-14T15:02:34.236Z",
+    "id": "Dl4C7fyVeV1zYEf3XwJZj",
+    "name": "BackUP N8N",
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "weeks",
+                "triggerAtDay": [
+                  1
+                ],
+                "triggerAtHour": 9
+              }
+            ]
+          }
+        },
+        "id": "54b6cc35-c0cc-4351-8c58-2e92a4da46b0",
+        "name": "Cronometro Semanal",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          208,
+          112
+        ]
+      },
+      {
+        "parameters": {
+          "url": "http://localhost:5678/api/v1/workflows",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "options": {}
+        },
+        "id": "8d6b4ecb-f6fa-42cc-8d6f-861d154e4c46",
+        "name": "Obtener Workflows",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          432,
+          112
+        ],
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "E9ZEcUMj6PjiUIaS",
+            "name": "Header Auth account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const allWorkflows = items[0].json.data;\nconst date = new Date().toISOString().slice(0, 10);\n\nreturn [{\n  json: {\n    fileName: `n8n_backup_${date}.json`\n  },\n  binary: {\n    data: {\n      data: Buffer.from(JSON.stringify(allWorkflows, null, 2)).toString('base64'),\n      mimeType: 'application/json',\n      fileExtension: 'json',\n      fileName: `n8n_backup_${date}.json`\n    }\n  }\n}];"
+        },
+        "id": "3e91beb3-94ac-44b8-8d4c-b99b47520228",
+        "name": "Crear Archivo JSON",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          656,
+          112
+        ]
+      },
+      {
+        "parameters": {
+          "sendTo": "giragui@yahoo.com.ar",
+          "subject": "Hola aqui el Back UP de N8N",
+          "message": "=\"Compañero, adjunto envío la copia de seguridad de los flujos de n8n. No borrar.\"",
+          "options": {
+            "attachmentsUi": {
+              "attachmentsBinary": [
+                {}
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.2,
+        "position": [
+          864,
+          112
+        ],
+        "id": "58a4a40f-ee2b-4c64-890b-d26b969c0133",
+        "name": "Send a message",
+        "webhookId": "7ffdc687-c3ac-43ce-85d2-6d3aa8bb09be",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "9z8lq17ehcF6ypn6",
+            "name": "Gmail account"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Cronometro Semanal": {
+        "main": [
+          [
+            {
+              "node": "Obtener Workflows",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Obtener Workflows": {
+        "main": [
+          [
+            {
+              "node": "Crear Archivo JSON",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Crear Archivo JSON": {
+        "main": [
+          [
+            {
+              "node": "Send a message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1",
+      "availableInMCP": false
+    },
+    "staticData": null,
+    "meta": {
+      "templateCredsSetupCompleted": true
+    },
+    "pinData": {},
+    "versionId": "90715de0-3caa-4903-b64d-f8f4516079e2",
+    "activeVersionId": "90715de0-3caa-4903-b64d-f8f4516079e2",
+    "triggerCount": 1,
+    "shared": [
+      {
+        "updatedAt": "2026-01-14T15:02:34.269Z",
+        "createdAt": "2026-01-14T15:02:34.269Z",
+        "role": "workflow:owner",
+        "workflowId": "Dl4C7fyVeV1zYEf3XwJZj",
+        "projectId": "3bfyiwZiLwsnaqI0"
+      }
+    ],
+    "activeVersion": {
+      "updatedAt": "2026-01-14T17:07:50.000Z",
+      "createdAt": "2026-01-14T17:05:43.926Z",
+      "versionId": "90715de0-3caa-4903-b64d-f8f4516079e2",
+      "workflowId": "Dl4C7fyVeV1zYEf3XwJZj",
+      "nodes": [
+        {
+          "parameters": {
+            "rule": {
+              "interval": [
+                {
+                  "field": "weeks",
+                  "triggerAtDay": [
+                    1
+                  ],
+                  "triggerAtHour": 9
+                }
+              ]
+            }
+          },
+          "id": "54b6cc35-c0cc-4351-8c58-2e92a4da46b0",
+          "name": "Cronometro Semanal",
+          "type": "n8n-nodes-base.scheduleTrigger",
+          "typeVersion": 1.1,
+          "position": [
+            208,
+            112
+          ]
+        },
+        {
+          "parameters": {
+            "url": "http://localhost:5678/api/v1/workflows",
+            "authentication": "genericCredentialType",
+            "genericAuthType": "httpHeaderAuth",
+            "options": {}
+          },
+          "id": "8d6b4ecb-f6fa-42cc-8d6f-861d154e4c46",
+          "name": "Obtener Workflows",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.1,
+          "position": [
+            432,
+            112
+          ],
+          "credentials": {
+            "httpHeaderAuth": {
+              "id": "E9ZEcUMj6PjiUIaS",
+              "name": "Header Auth account"
+            }
+          }
+        },
+        {
+          "parameters": {
+            "jsCode": "const allWorkflows = items[0].json.data;\nconst date = new Date().toISOString().slice(0, 10);\n\nreturn [{\n  json: {\n    fileName: `n8n_backup_${date}.json`\n  },\n  binary: {\n    data: {\n      data: Buffer.from(JSON.stringify(allWorkflows, null, 2)).toString('base64'),\n      mimeType: 'application/json',\n      fileExtension: 'json',\n      fileName: `n8n_backup_${date}.json`\n    }\n  }\n}];"
+          },
+          "id": "3e91beb3-94ac-44b8-8d4c-b99b47520228",
+          "name": "Crear Archivo JSON",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            656,
+            112
+          ]
+        },
+        {
+          "parameters": {
+            "sendTo": "giragui@yahoo.com.ar",
+            "subject": "Hola aqui el Back UP de N8N",
+            "message": "=\"Compañero, adjunto envío la copia de seguridad de los flujos de n8n. No borrar.\"",
+            "options": {
+              "attachmentsUi": {
+                "attachmentsBinary": [
+                  {}
+                ]
+              }
+            }
+          },
+          "type": "n8n-nodes-base.gmail",
+          "typeVersion": 2.2,
+          "position": [
+            864,
+            112
+          ],
+          "id": "58a4a40f-ee2b-4c64-890b-d26b969c0133",
+          "name": "Send a message",
+          "webhookId": "7ffdc687-c3ac-43ce-85d2-6d3aa8bb09be",
+          "credentials": {
+            "gmailOAuth2": {
+              "id": "9z8lq17ehcF6ypn6",
+              "name": "Gmail account"
+            }
+          }
+        }
+      ],
+      "connections": {
+        "Cronometro Semanal": {
+          "main": [
+            [
+              {
+                "node": "Obtener Workflows",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Obtener Workflows": {
+          "main": [
+            [
+              {
+                "node": "Crear Archivo JSON",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Crear Archivo JSON": {
+          "main": [
+            [
+              {
+                "node": "Send a message",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "authors": "Gastón Iragui",
+      "name": "Version 90715de0",
+      "description": "",
+      "autosaved": false
+    },
+    "tags": []
+  },
+  {
+    "updatedAt": "2026-01-30T22:16:09.678Z",
+    "createdAt": "2025-12-18T15:12:06.137Z",
+    "id": "XGUjZg81zA8EuVws",
+    "name": "Noticias de Desarroladores",
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "triggerAtHour": 10
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.3,
+        "position": [
+          -368,
+          -32
+        ],
+        "id": "03c71a0a-2cb2-4f8e-b8ff-b7d026547085",
+        "name": "Schedule Trigger"
+      },
+      {
+        "parameters": {
+          "url": "https://hnrss.org/newest",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          -32,
+          96
+        ],
+        "id": "1e2c1fb5-e317-43b5-9f8f-c694ba8963aa",
+        "name": "HTTP Request"
+      },
+      {
+        "parameters": {
+          "url": "https://www.reddit.com/r/programming/.rss",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          -32,
+          -144
+        ],
+        "id": "e7697d88-4bcd-42c3-a6b7-be7bcd71ea84",
+        "name": "HTTP Request1"
+      },
+      {
+        "parameters": {
+          "fieldsToAggregate": {
+            "fieldToAggregate": [
+              {
+                "fieldToAggregate": "data",
+                "renameField": true,
+                "outputFieldName": "hackernews"
+              },
+              {
+                "fieldToAggregate": "data",
+                "renameField": true,
+                "outputFieldName": "reddit"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.aggregate",
+        "typeVersion": 1,
+        "position": [
+          224,
+          -16
+        ],
+        "id": "67960db3-da70-49c6-bf9b-0fab7429a92e",
+        "name": "Aggregate"
+      },
+      {
+        "parameters": {
+          "modelId": {
+            "__rl": true,
+            "value": "models/gemini-3-flash-preview",
+            "mode": "list",
+            "cachedResultName": "models/gemini-3-flash-preview"
+          },
+          "messages": {
+            "values": [
+              {
+                "content": "=Actúa como un curador de noticias para desarrolladores\n\nrecibirás una lista de noticias de Hacker News y Reddit.\nPara cada noticia:\n\n-Decide si es ÚTIL o DESCARTABLE.\n-Prioriza las que aportan aprendizaje, valor técnico.\no crecimiento profesional.\n-Evita drama, clickbait y ruido.\nPara las noticias ÚTILES: \n-Resume en 2-3 líneas.\n-Explica brevemente porque vale la pena leerla.\n-Añade un comentario practico y motivador.\nPara las descartadas:\n-Indica en una línea por qué se descartan.\n\nDevuelve solo las noticias útiles ordenadas por relevancia. El formato de salida debe ser exclusivamente html, este será enviado por correo electrónico.\nSolo responde en html\n\n {{ $json.hackernews }}\n {{ $json.reddit }}\n"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.googleGemini",
+        "typeVersion": 1,
+        "position": [
+          432,
+          -16
+        ],
+        "id": "4d5385b1-b341-436e-8020-46e5bc891124",
+        "name": "Message a model",
+        "credentials": {
+          "googlePalmApi": {
+            "id": "YEGj3HYtTly91ene",
+            "name": "Google Gemini(PaLM) Api account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "sendTo": "giragui28@gmail.com",
+          "subject": "Resumen de Noticias Des",
+          "message": "=Hola son las novedades de desarrolladores que me pediste.\n {{ $json.content.parts[0].text }}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.2,
+        "position": [
+          784,
+          -16
+        ],
+        "id": "b5ceb30a-f387-4ba7-8093-a13ffb3101e1",
+        "name": "Send a message",
+        "webhookId": "f2a080ff-ffa5-490a-85ae-bfa881d1c882",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "9z8lq17ehcF6ypn6",
+            "name": "Gmail account"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Schedule Trigger": {
+        "main": [
+          [
+            {
+              "node": "HTTP Request1",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "HTTP Request",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "HTTP Request1": {
+        "main": [
+          [
+            {
+              "node": "Aggregate",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "HTTP Request": {
+        "main": [
+          [
+            {
+              "node": "Aggregate",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Aggregate": {
+        "main": [
+          [
+            {
+              "node": "Message a model",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Message a model": {
+        "main": [
+          [
+            {
+              "node": "Send a message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": {
+      "node:Schedule Trigger": {
+        "recurrenceRules": []
+      }
+    },
+    "meta": {
+      "templateCredsSetupCompleted": true
+    },
+    "pinData": {},
+    "versionId": "d07d2d7d-d865-44a6-974a-7abc920b8376",
+    "activeVersionId": "d07d2d7d-d865-44a6-974a-7abc920b8376",
+    "triggerCount": 1,
+    "shared": [
+      {
+        "updatedAt": "2025-12-18T15:12:06.231Z",
+        "createdAt": "2025-12-18T15:12:06.231Z",
+        "role": "workflow:owner",
+        "workflowId": "XGUjZg81zA8EuVws",
+        "projectId": "3bfyiwZiLwsnaqI0"
+      }
+    ],
+    "activeVersion": {
+      "updatedAt": "2026-01-30T22:16:12.000Z",
+      "createdAt": "2026-01-30T22:16:09.668Z",
+      "versionId": "d07d2d7d-d865-44a6-974a-7abc920b8376",
+      "workflowId": "XGUjZg81zA8EuVws",
+      "nodes": [
+        {
+          "parameters": {
+            "rule": {
+              "interval": [
+                {
+                  "triggerAtHour": 10
+                }
+              ]
+            }
+          },
+          "type": "n8n-nodes-base.scheduleTrigger",
+          "typeVersion": 1.3,
+          "position": [
+            -368,
+            -32
+          ],
+          "id": "03c71a0a-2cb2-4f8e-b8ff-b7d026547085",
+          "name": "Schedule Trigger"
+        },
+        {
+          "parameters": {
+            "url": "https://hnrss.org/newest",
+            "options": {}
+          },
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.3,
+          "position": [
+            -32,
+            96
+          ],
+          "id": "1e2c1fb5-e317-43b5-9f8f-c694ba8963aa",
+          "name": "HTTP Request"
+        },
+        {
+          "parameters": {
+            "url": "https://www.reddit.com/r/programming/.rss",
+            "options": {}
+          },
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.3,
+          "position": [
+            -32,
+            -144
+          ],
+          "id": "e7697d88-4bcd-42c3-a6b7-be7bcd71ea84",
+          "name": "HTTP Request1"
+        },
+        {
+          "parameters": {
+            "fieldsToAggregate": {
+              "fieldToAggregate": [
+                {
+                  "fieldToAggregate": "data",
+                  "renameField": true,
+                  "outputFieldName": "hackernews"
+                },
+                {
+                  "fieldToAggregate": "data",
+                  "renameField": true,
+                  "outputFieldName": "reddit"
+                }
+              ]
+            },
+            "options": {}
+          },
+          "type": "n8n-nodes-base.aggregate",
+          "typeVersion": 1,
+          "position": [
+            224,
+            -16
+          ],
+          "id": "67960db3-da70-49c6-bf9b-0fab7429a92e",
+          "name": "Aggregate"
+        },
+        {
+          "parameters": {
+            "modelId": {
+              "__rl": true,
+              "value": "models/gemini-3-flash-preview",
+              "mode": "list",
+              "cachedResultName": "models/gemini-3-flash-preview"
+            },
+            "messages": {
+              "values": [
+                {
+                  "content": "=Actúa como un curador de noticias para desarrolladores\n\nrecibirás una lista de noticias de Hacker News y Reddit.\nPara cada noticia:\n\n-Decide si es ÚTIL o DESCARTABLE.\n-Prioriza las que aportan aprendizaje, valor técnico.\no crecimiento profesional.\n-Evita drama, clickbait y ruido.\nPara las noticias ÚTILES: \n-Resume en 2-3 líneas.\n-Explica brevemente porque vale la pena leerla.\n-Añade un comentario practico y motivador.\nPara las descartadas:\n-Indica en una línea por qué se descartan.\n\nDevuelve solo las noticias útiles ordenadas por relevancia. El formato de salida debe ser exclusivamente html, este será enviado por correo electrónico.\nSolo responde en html\n\n {{ $json.hackernews }}\n {{ $json.reddit }}\n"
+                }
+              ]
+            },
+            "options": {}
+          },
+          "type": "@n8n/n8n-nodes-langchain.googleGemini",
+          "typeVersion": 1,
+          "position": [
+            432,
+            -16
+          ],
+          "id": "4d5385b1-b341-436e-8020-46e5bc891124",
+          "name": "Message a model",
+          "credentials": {
+            "googlePalmApi": {
+              "id": "YEGj3HYtTly91ene",
+              "name": "Google Gemini(PaLM) Api account"
+            }
+          }
+        },
+        {
+          "parameters": {
+            "sendTo": "giragui28@gmail.com",
+            "subject": "Resumen de Noticias Des",
+            "message": "=Hola son las novedades de desarrolladores que me pediste.\n {{ $json.content.parts[0].text }}",
+            "options": {}
+          },
+          "type": "n8n-nodes-base.gmail",
+          "typeVersion": 2.2,
+          "position": [
+            784,
+            -16
+          ],
+          "id": "b5ceb30a-f387-4ba7-8093-a13ffb3101e1",
+          "name": "Send a message",
+          "webhookId": "f2a080ff-ffa5-490a-85ae-bfa881d1c882",
+          "credentials": {
+            "gmailOAuth2": {
+              "id": "9z8lq17ehcF6ypn6",
+              "name": "Gmail account"
+            }
+          }
+        }
+      ],
+      "connections": {
+        "Schedule Trigger": {
+          "main": [
+            [
+              {
+                "node": "HTTP Request1",
+                "type": "main",
+                "index": 0
+              },
+              {
+                "node": "HTTP Request",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "HTTP Request1": {
+          "main": [
+            [
+              {
+                "node": "Aggregate",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "HTTP Request": {
+          "main": [
+            [
+              {
+                "node": "Aggregate",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Aggregate": {
+          "main": [
+            [
+              {
+                "node": "Message a model",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Message a model": {
+          "main": [
+            [
+              {
+                "node": "Send a message",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "authors": "Gastón Iragui",
+      "name": "Version d07d2d7d",
+      "description": "",
+      "autosaved": false
+    },
+    "tags": []
+  },
+  {
+    "updatedAt": "2026-01-06T13:44:31.862Z",
+    "createdAt": "2025-12-20T22:34:53.148Z",
+    "id": "XMljLxrJxCgqlnd3",
+    "name": "Docobot",
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+      {
+        "parameters": {
+          "public": true,
+          "initialMessages": "Hola Soy Docobot 🍄.",
+          "options": {
+            "allowedOrigins": "*",
+            "inputPlaceholder": "Escribe tu consulta...",
+            "subtitle": "Tu Docobot amigo 24/7. que duda te trae por aqui?",
+            "title": "Hola como estas? 🍄"
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+        "typeVersion": 1.4,
+        "position": [
+          -416,
+          -128
+        ],
+        "id": "b690efe0-1cdd-49d2-8142-71c1dbba12f4",
+        "name": "When chat message received",
+        "webhookId": "6589e9ca-9949-4710-b861-f6b0d66da02f"
+      },
+      {
+        "parameters": {
+          "options": {
+            "systemMessage": "=Eres Docobot, el asistente virtual experto en cultivo de hongos de Docdoco (iragui.ddns.net). Tu misión es ayudar a cultivadores principiantes y avanzados a tener éxito en sus cosechas, basándote en la biología científica y en 7 años de experiencia práctica de campo.\n\nDIRECTRICES DE PERSONALIDAD:\n- Tono: Profesional pero accesible, alentador y práctico. Hablas como un \"micólogo de trinchera\", no como una enciclopedia aburrida.\n- Autoridad: Sos humilde pero firme en la seguridad. Si algo es peligroso (como moho negro), dilo claramente.\n\nREGLAS DE CONOCIMIENTO (JERARQUÍA):\n1. TU VERDAD ABSOLUTA es la información provista en el Contexto (RAG), especialmente la etiquetada como \"Gastón - Micólogo (Experiencia 7 años)\".\n2. Si hay contradicción entre una teoría general y la experiencia de Gastón (ej. pasteurizar vs. esterilizar sustrato bulk), SIEMPRE recomienda el método de Gastón (pasteurizar para conservar bacterias benéficas).\n3. Si la respuesta no está en el contexto, puedes usar tu conocimiento general de micología, pero avisa que es una \"recomendación general\" y no una técnica específica de la casa.\n\nREGLAS DE SEGURIDAD Y TÉCNICA:\n- JAMÁS recomiendes esterilizar estiércol/bosta (explica que eso invita al Trichoderma).\n- Enfatiza siempre la higiene y el \"Test del Olfato\" (Vinagre = Contaminación).\n- Si preguntan por consumo o identificación de hongos silvestres, sé extremadamente cauteloso y recomienda consultar a expertos humanos para evitar envenenamientos.\n\nFORMATO DE RESPUESTA:\n- Sé conciso y directo.\n- Usa listas o pasos numerados para instrucciones técnicas.\n- Si el usuario está frustrado (ej. se le contaminó todo), sé empático antes de dar la solución técnica."
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 3,
+        "position": [
+          -144,
+          -128
+        ],
+        "id": "d23a3619-4c69-4b87-9a1c-863cde5ed53d",
+        "name": "AI Agent"
+      },
+      {
+        "parameters": {
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+        "typeVersion": 1,
+        "position": [
+          -272,
+          96
+        ],
+        "id": "08f7f3e9-371b-44d4-873e-a1804cffb312",
+        "name": "Google Gemini Chat Model",
+        "credentials": {
+          "googlePalmApi": {
+            "id": "YEGj3HYtTly91ene",
+            "name": "Google Gemini(PaLM) Api account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "chatId": "1680318803",
+          "text": "=👤 Cliente: {{ $json.nombre_cliente }} 📧 Email: {{ $json.correo_electronico }} ",
+          "additionalFields": {}
+        },
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2,
+        "position": [
+          272,
+          -128
+        ],
+        "id": "bc21911c-df98-41af-a8e0-a488fd84efb8",
+        "name": "Send a text message",
+        "webhookId": "fcd72b0d-8922-40c3-a0d1-e9017260f922",
+        "credentials": {
+          "telegramApi": {
+            "id": "TrmkTaUMNEUaBB1m",
+            "name": "Telegram account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "descriptionType": "manual",
+          "toolDescription": "Busca en la base de datos de preguntas frecuentes respuestas a problemas técnicos.",
+          "documentId": {
+            "__rl": true,
+            "value": "1dg8NuT4iSjUaMVark37d4zYAEiMo3bxBxCyYnHd6kDg",
+            "mode": "list",
+            "cachedResultName": "Base_Conocimiento_Docobot",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dg8NuT4iSjUaMVark37d4zYAEiMo3bxBxCyYnHd6kDg/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "gid=0",
+            "mode": "list",
+            "cachedResultName": "Hoja 1",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dg8NuT4iSjUaMVark37d4zYAEiMo3bxBxCyYnHd6kDg/edit#gid=0"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheetsTool",
+        "typeVersion": 4.7,
+        "position": [
+          64,
+          144
+        ],
+        "id": "2bc16a27-20d5-4455-9960-0285b8ebbc0e",
+        "name": "Base_Conocimiento_Docobot",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "QsmF1j7kX4jDYD0x",
+            "name": "Google Sheets account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "sessionIdType": "customKey",
+          "sessionKey": "={{ $workflow.id }}",
+          "contextWindowLength": 10
+        },
+        "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+        "typeVersion": 1.3,
+        "position": [
+          -96,
+          160
+        ],
+        "id": "62342d79-2bf0-4f4f-9ec1-c13cac21ec20",
+        "name": "Simple Memory"
+      },
+      {
+        "parameters": {
+          "descriptionType": "manual",
+          "toolDescription": "Registra un nuevo ticket de soporte. Argumentos obligatorios: nombre, correo, problema, prioridad, estado.",
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "value": "10_UsRyfnqE3wnPI36aUwbE7b9GoLR9KSjirLMgZMvCk",
+            "mode": "list",
+            "cachedResultName": "DocoBot_Base_Conocimiento_ticket",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10_UsRyfnqE3wnPI36aUwbE7b9GoLR9KSjirLMgZMvCk/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "gid=0",
+            "mode": "list",
+            "cachedResultName": "Tickets",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11y9FiNKzyY7IMZOWzCpUXzMz_0w5E8HJovGS7BEVQO0/edit#gid=0"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "fecha": "={{ $now.minus({hours: -2}).toFormat('dd/MM/yyyy HH:mm') }}",
+              "nombre": "={{ $json.nombre }}",
+              "problema": "={{ $json.descripcion_incidencia }}",
+              "prioridad": "={{ $json.prioridad_de_respuesta }}",
+              "estado": "={{ $json.estado_incidencia }}",
+              "whatsap": "={{ $json.whatsapp }}"
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "fecha",
+                "displayName": "fecha",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "nombre",
+                "displayName": "nombre",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "whatsap",
+                "displayName": "whatsap",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "problema",
+                "displayName": "problema",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "prioridad",
+                "displayName": "prioridad",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "estado",
+                "displayName": "estado",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheetsTool",
+        "typeVersion": 4.7,
+        "position": [
+          256,
+          128
+        ],
+        "id": "cd02ffa6-0c33-4a63-87b2-5bf53799e2bc",
+        "name": "DocoBot_Base_Conocimiento_ticket",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "QsmF1j7kX4jDYD0x",
+            "name": "Google Sheets account"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "When chat message received": {
+        "main": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Google Gemini Chat Model": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "AI Agent": {
+        "main": [
+          []
+        ]
+      },
+      "Send a text message": {
+        "main": [
+          []
+        ]
+      },
+      "Base_Conocimiento_Docobot": {
+        "ai_tool": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Simple Memory": {
+        "ai_memory": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "ai_memory",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "DocoBot_Base_Conocimiento_ticket": {
+        "ai_tool": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null,
+    "meta": {
+      "templateCredsSetupCompleted": true
+    },
+    "pinData": {},
+    "versionId": "d819af08-8c80-4b3d-8ca4-a897fef5cf39",
+    "activeVersionId": "1031cd06-c744-4cbd-8278-34c84c6ae619",
+    "triggerCount": 1,
+    "shared": [
+      {
+        "updatedAt": "2025-12-20T22:34:53.195Z",
+        "createdAt": "2025-12-20T22:34:53.195Z",
+        "role": "workflow:owner",
+        "workflowId": "XMljLxrJxCgqlnd3",
+        "projectId": "3bfyiwZiLwsnaqI0"
+      }
+    ],
+    "activeVersion": {
+      "updatedAt": "2025-12-22T21:58:26.000Z",
+      "createdAt": "2025-12-22T21:57:33.473Z",
+      "versionId": "1031cd06-c744-4cbd-8278-34c84c6ae619",
+      "workflowId": "XMljLxrJxCgqlnd3",
+      "nodes": [
+        {
+          "parameters": {
+            "public": true,
+            "initialMessages": "Hola Soy Docobot 🍄.",
+            "options": {
+              "allowedOrigins": "*",
+              "inputPlaceholder": "Escribe tu consulta...",
+              "subtitle": "Tu Docobot amigo 24/7. que duda te trae por aqui?",
+              "title": "Hola como estas? 🍄"
+            }
+          },
+          "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+          "typeVersion": 1.4,
+          "position": [
+            -416,
+            -128
+          ],
+          "id": "b690efe0-1cdd-49d2-8142-71c1dbba12f4",
+          "name": "When chat message received",
+          "webhookId": "6589e9ca-9949-4710-b861-f6b0d66da02f"
+        },
+        {
+          "parameters": {
+            "options": {
+              "systemMessage": "=Eres Docobot, el asistente virtual experto en cultivo de hongos de Docdoco (iragui.ddns.net). Tu misión es ayudar a cultivadores principiantes y avanzados a tener éxito en sus cosechas, basándote en la biología científica y en 7 años de experiencia práctica de campo.\n\nDIRECTRICES DE PERSONALIDAD:\n- Tono: Profesional pero accesible, alentador y práctico. Hablas como un \"micólogo de trinchera\", no como una enciclopedia aburrida.\n- Autoridad: Sos humilde pero firme en la seguridad. Si algo es peligroso (como moho negro), dilo claramente.\n\nREGLAS DE CONOCIMIENTO (JERARQUÍA):\n1. TU VERDAD ABSOLUTA es la información provista en el Contexto (RAG), especialmente la etiquetada como \"Gastón - Micólogo (Experiencia 7 años)\".\n2. Si hay contradicción entre una teoría general y la experiencia de Gastón (ej. pasteurizar vs. esterilizar sustrato bulk), SIEMPRE recomienda el método de Gastón (pasteurizar para conservar bacterias benéficas).\n3. Si la respuesta no está en el contexto, puedes usar tu conocimiento general de micología, pero avisa que es una \"recomendación general\" y no una técnica específica de la casa.\n\nREGLAS DE SEGURIDAD Y TÉCNICA:\n- JAMÁS recomiendes esterilizar estiércol/bosta (explica que eso invita al Trichoderma).\n- Enfatiza siempre la higiene y el \"Test del Olfato\" (Vinagre = Contaminación).\n- Si preguntan por consumo o identificación de hongos silvestres, sé extremadamente cauteloso y recomienda consultar a expertos humanos para evitar envenenamientos.\n\nFORMATO DE RESPUESTA:\n- Sé conciso y directo.\n- Usa listas o pasos numerados para instrucciones técnicas.\n- Si el usuario está frustrado (ej. se le contaminó todo), sé empático antes de dar la solución técnica."
+            }
+          },
+          "type": "@n8n/n8n-nodes-langchain.agent",
+          "typeVersion": 3,
+          "position": [
+            -144,
+            -128
+          ],
+          "id": "d23a3619-4c69-4b87-9a1c-863cde5ed53d",
+          "name": "AI Agent"
+        },
+        {
+          "parameters": {
+            "options": {}
+          },
+          "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+          "typeVersion": 1,
+          "position": [
+            -272,
+            96
+          ],
+          "id": "08f7f3e9-371b-44d4-873e-a1804cffb312",
+          "name": "Google Gemini Chat Model",
+          "credentials": {
+            "googlePalmApi": {
+              "id": "YEGj3HYtTly91ene",
+              "name": "Google Gemini(PaLM) Api account"
+            }
+          }
+        },
+        {
+          "parameters": {
+            "chatId": "1680318803",
+            "text": "=👤 Cliente: {{ $json.nombre_cliente }} 📧 Email: {{ $json.correo_electronico }} ",
+            "additionalFields": {}
+          },
+          "type": "n8n-nodes-base.telegram",
+          "typeVersion": 1.2,
+          "position": [
+            272,
+            -112
+          ],
+          "id": "bc21911c-df98-41af-a8e0-a488fd84efb8",
+          "name": "Send a text message",
+          "webhookId": "fcd72b0d-8922-40c3-a0d1-e9017260f922",
+          "credentials": {
+            "telegramApi": {
+              "id": "TrmkTaUMNEUaBB1m",
+              "name": "Telegram account"
+            }
+          }
+        },
+        {
+          "parameters": {
+            "descriptionType": "manual",
+            "toolDescription": "Busca en la base de datos de preguntas frecuentes respuestas a problemas técnicos.",
+            "documentId": {
+              "__rl": true,
+              "value": "1dg8NuT4iSjUaMVark37d4zYAEiMo3bxBxCyYnHd6kDg",
+              "mode": "list",
+              "cachedResultName": "Base_Conocimiento_Docobot",
+              "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dg8NuT4iSjUaMVark37d4zYAEiMo3bxBxCyYnHd6kDg/edit?usp=drivesdk"
+            },
+            "sheetName": {
+              "__rl": true,
+              "value": "gid=0",
+              "mode": "list",
+              "cachedResultName": "Hoja 1",
+              "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dg8NuT4iSjUaMVark37d4zYAEiMo3bxBxCyYnHd6kDg/edit#gid=0"
+            },
+            "options": {}
+          },
+          "type": "n8n-nodes-base.googleSheetsTool",
+          "typeVersion": 4.7,
+          "position": [
+            64,
+            144
+          ],
+          "id": "2bc16a27-20d5-4455-9960-0285b8ebbc0e",
+          "name": "Base_Conocimiento_Docobot",
+          "credentials": {
+            "googleSheetsOAuth2Api": {
+              "id": "QsmF1j7kX4jDYD0x",
+              "name": "Google Sheets account"
+            }
+          }
+        },
+        {
+          "parameters": {
+            "sessionIdType": "customKey",
+            "sessionKey": "={{ $workflow.id }}",
+            "contextWindowLength": 10
+          },
+          "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+          "typeVersion": 1.3,
+          "position": [
+            -96,
+            160
+          ],
+          "id": "62342d79-2bf0-4f4f-9ec1-c13cac21ec20",
+          "name": "Simple Memory"
+        },
+        {
+          "parameters": {
+            "descriptionType": "manual",
+            "toolDescription": "Registra un nuevo ticket de soporte. Argumentos obligatorios: nombre, correo, problema, prioridad, estado.",
+            "operation": "append",
+            "documentId": {
+              "__rl": true,
+              "value": "10_UsRyfnqE3wnPI36aUwbE7b9GoLR9KSjirLMgZMvCk",
+              "mode": "list",
+              "cachedResultName": "DocoBot_Base_Conocimiento_ticket",
+              "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10_UsRyfnqE3wnPI36aUwbE7b9GoLR9KSjirLMgZMvCk/edit?usp=drivesdk"
+            },
+            "sheetName": {
+              "__rl": true,
+              "value": "gid=0",
+              "mode": "list",
+              "cachedResultName": "Tickets",
+              "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11y9FiNKzyY7IMZOWzCpUXzMz_0w5E8HJovGS7BEVQO0/edit#gid=0"
+            },
+            "columns": {
+              "mappingMode": "defineBelow",
+              "value": {
+                "fecha": "={{ $now.toFormat('dd/MM/yyyy HH:mm') }}",
+                "nombre": "={{ $json.nombre_cliente }}",
+                "problema": "={{ $json.descripcion_incidencia }}",
+                "prioridad": "={{ $json.prioridad_de_respuesta }}",
+                "estado": "={{ $json.estado_incidencia }}",
+                "whatsap": "={{ $fromAI('whatsap', ``, 'string') }}"
+              },
+              "matchingColumns": [],
+              "schema": [
+                {
+                  "id": "fecha",
+                  "displayName": "fecha",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "nombre",
+                  "displayName": "nombre",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "whatsap",
+                  "displayName": "whatsap",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "problema",
+                  "displayName": "problema",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "prioridad",
+                  "displayName": "prioridad",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "estado",
+                  "displayName": "estado",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                }
+              ],
+              "attemptToConvertTypes": false,
+              "convertFieldsToString": false
+            },
+            "options": {}
+          },
+          "type": "n8n-nodes-base.googleSheetsTool",
+          "typeVersion": 4.7,
+          "position": [
+            256,
+            128
+          ],
+          "id": "cd02ffa6-0c33-4a63-87b2-5bf53799e2bc",
+          "name": "DocoBot_Base_Conocimiento_ticket",
+          "credentials": {
+            "googleSheetsOAuth2Api": {
+              "id": "QsmF1j7kX4jDYD0x",
+              "name": "Google Sheets account"
+            }
+          }
+        }
+      ],
+      "connections": {
+        "When chat message received": {
+          "main": [
+            [
+              {
+                "node": "AI Agent",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Google Gemini Chat Model": {
+          "ai_languageModel": [
+            [
+              {
+                "node": "AI Agent",
+                "type": "ai_languageModel",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "AI Agent": {
+          "main": [
+            []
+          ]
+        },
+        "Send a text message": {
+          "main": [
+            []
+          ]
+        },
+        "Base_Conocimiento_Docobot": {
+          "ai_tool": [
+            [
+              {
+                "node": "AI Agent",
+                "type": "ai_tool",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Simple Memory": {
+          "ai_memory": [
+            [
+              {
+                "node": "AI Agent",
+                "type": "ai_memory",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "DocoBot_Base_Conocimiento_ticket": {
+          "ai_tool": [
+            [
+              {
+                "node": "AI Agent",
+                "type": "ai_tool",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "authors": "Gastón Iragui",
+      "name": "Version 1031cd06",
+      "description": "",
+      "autosaved": false
+    },
+    "tags": []
+  },
+  {
+    "updatedAt": "2026-02-03T00:11:42.572Z",
+    "createdAt": "2025-12-20T19:58:28.346Z",
+    "id": "eha0WhEFppSk0NW3",
+    "name": "Agente Insta UronWeb",
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "triggerAtHour": 22
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.3,
+        "position": [
+          -992,
+          -208
+        ],
+        "id": "1aabe8c7-216a-4125-9906-a6730716c2c6",
+        "name": "Schedule Trigger"
+      },
+      {
+        "parameters": {
+          "operation": "write",
+          "fileName": "C:\\Users\\Administrador\\.n8n-files\\post_uronweb.mp4",
+          "options": {
+            "append": false
+          }
+        },
+        "type": "n8n-nodes-base.readWriteFile",
+        "typeVersion": 1,
+        "position": [
+          -576,
+          -208
+        ],
+        "id": "523201c5-8c94-40e2-8cf8-6a620efc14c7",
+        "name": "Read/Write Files from Disk",
+        "alwaysOutputData": false
+      },
+      {
+        "parameters": {},
+        "type": "n8n-nodes-base.limit",
+        "typeVersion": 1,
+        "position": [
+          -320,
+          -112
+        ],
+        "id": "3cc098b1-5d92-48a9-bb78-885bb686e2d2",
+        "name": "Limit"
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "\"Actuá como el Community Manager de Uronweb. Somos expertos en soporte técnico de servidores Windows/Linux, redes y automatizaciones con n8n. Escribí un caption para un Instagram Reel que sea técnico pero vendedor. Usá un tono profesional y directo. No uses más de 90 palabras. Incluí 15 hashtags específicos del sector (ej: #SysAdmin #n8n #Uronweb). Enfocá el mensaje en que ayudamos a empresas a escalar con tecnología estable.\" ",
+          "batching": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.chainLlm",
+        "typeVersion": 1.7,
+        "position": [
+          -112,
+          -112
+        ],
+        "id": "73f458c9-560e-41d1-9c4a-087b02429e51",
+        "name": "Basic LLM Chain"
+      },
+      {
+        "parameters": {
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+        "typeVersion": 1,
+        "position": [
+          -192,
+          96
+        ],
+        "id": "3989f1cb-75c7-44c5-98fa-9d8f86bc3d7c",
+        "name": "Google Gemini Chat Model",
+        "credentials": {
+          "googlePalmApi": {
+            "id": "YEGj3HYtTly91ene",
+            "name": "Google Gemini(PaLM) Api account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "fileSelector": "C:\\Users\\Administrador\\.n8n-files\\instagram_pendiente\\*.mp4",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.readWriteFile",
+        "typeVersion": 1.1,
+        "position": [
+          -784,
+          0
+        ],
+        "id": "51abd5b4-d417-4c55-9750-c71aac5b8b01",
+        "name": "Read/Write Files from Disk1"
+      },
+      {
+        "parameters": {
+          "amount": 70
+        },
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [
+          512,
+          -16
+        ],
+        "id": "34516bb8-4755-474d-9742-cbdade899f21",
+        "name": "Wait",
+        "webhookId": "050ed6fb-6911-4854-a1c2-0c2ffd876e32"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://graph.facebook.com/v24.0/17841478077629622/media",
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "video_url",
+                "value": "http://iragui.ddns.net/publico/post_uronweb.mp4"
+              },
+              {
+                "name": "media_type",
+                "value": "REELS"
+              },
+              {
+                "name": "caption",
+                "value": "={{ $json.text }}"
+              },
+              {
+                "name": "access_token",
+                "value": "EAATl3ZAn2MksBQuKXDGcGkO7dAXmPztqiRaTA2IJafn7QkGsJdmVsQHSOLDDKErVC7KFm6AC4YjG8XGUKBkuZAvl4fQceeYrVoBR9cMYndzgkMCokJMMZAXLZCjMBDD7xZC8tZACzIyFZAgJdmnGMNd9DOVCedfFFfZCoretAgUZCP8F3KDC28mYwME6hzuNUESbXTueQvS3zCbiiezBe5EXKBTo0IXFiOLqaouXZCYGymS7CYLQZDZD"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          288,
+          -112
+        ],
+        "id": "2c6d4d32-1c02-4a0b-bd5f-e5a76b9df632",
+        "name": "HTTP Request POST /media"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://graph.facebook.com/v24.0/17841478077629622/media_publish",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "access_token",
+                "value": "EAATl3ZAn2MksBQuKXDGcGkO7dAXmPztqiRaTA2IJafn7QkGsJdmVsQHSOLDDKErVC7KFm6AC4YjG8XGUKBkuZAvl4fQceeYrVoBR9cMYndzgkMCokJMMZAXLZCjMBDD7xZC8tZACzIyFZAgJdmnGMNd9DOVCedfFFfZCoretAgUZCP8F3KDC28mYwME6hzuNUESbXTueQvS3zCbiiezBe5EXKBTo0IXFiOLqaouXZCYGymS7CYLQZDZD"
+              },
+              {
+                "name": "creation_id",
+                "value": "={{ $json.id }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          672,
+          -112
+        ],
+        "id": "0da4c57e-4f7c-4a22-9103-57c734e6803a",
+        "name": "HTTP Request /media_publish"
+      }
+    ],
+    "connections": {
+      "Schedule Trigger": {
+        "main": [
+          [
+            {
+              "node": "Read/Write Files from Disk1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Read/Write Files from Disk": {
+        "main": [
+          [
+            {
+              "node": "Limit",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Limit": {
+        "main": [
+          [
+            {
+              "node": "Basic LLM Chain",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Google Gemini Chat Model": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "Basic LLM Chain",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Basic LLM Chain": {
+        "main": [
+          [
+            {
+              "node": "HTTP Request POST /media",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Read/Write Files from Disk1": {
+        "main": [
+          [
+            {
+              "node": "Read/Write Files from Disk",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Wait": {
+        "main": [
+          [
+            {
+              "node": "HTTP Request /media_publish",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "HTTP Request POST /media": {
+        "main": [
+          [
+            {
+              "node": "Wait",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "HTTP Request /media_publish": {
+        "main": [
+          []
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": {
+      "node:Schedule Trigger": {
+        "recurrenceRules": []
+      }
+    },
+    "meta": {
+      "templateCredsSetupCompleted": true
+    },
+    "pinData": {},
+    "versionId": "73c46f09-eff8-4907-9a39-02d2b389087d",
+    "activeVersionId": "73c46f09-eff8-4907-9a39-02d2b389087d",
+    "triggerCount": 1,
+    "shared": [
+      {
+        "updatedAt": "2025-12-20T19:58:28.362Z",
+        "createdAt": "2025-12-20T19:58:28.362Z",
+        "role": "workflow:owner",
+        "workflowId": "eha0WhEFppSk0NW3",
+        "projectId": "3bfyiwZiLwsnaqI0"
+      }
+    ],
+    "activeVersion": {
+      "updatedAt": "2026-02-03T00:11:45.000Z",
+      "createdAt": "2026-02-03T00:11:42.564Z",
+      "versionId": "73c46f09-eff8-4907-9a39-02d2b389087d",
+      "workflowId": "eha0WhEFppSk0NW3",
+      "nodes": [
+        {
+          "parameters": {
+            "rule": {
+              "interval": [
+                {
+                  "triggerAtHour": 22
+                }
+              ]
+            }
+          },
+          "type": "n8n-nodes-base.scheduleTrigger",
+          "typeVersion": 1.3,
+          "position": [
+            -992,
+            -208
+          ],
+          "id": "1aabe8c7-216a-4125-9906-a6730716c2c6",
+          "name": "Schedule Trigger"
+        },
+        {
+          "parameters": {
+            "operation": "write",
+            "fileName": "C:\\Users\\Administrador\\.n8n-files\\post_uronweb.mp4",
+            "options": {
+              "append": false
+            }
+          },
+          "type": "n8n-nodes-base.readWriteFile",
+          "typeVersion": 1,
+          "position": [
+            -576,
+            -208
+          ],
+          "id": "523201c5-8c94-40e2-8cf8-6a620efc14c7",
+          "name": "Read/Write Files from Disk",
+          "alwaysOutputData": false
+        },
+        {
+          "parameters": {},
+          "type": "n8n-nodes-base.limit",
+          "typeVersion": 1,
+          "position": [
+            -320,
+            -112
+          ],
+          "id": "3cc098b1-5d92-48a9-bb78-885bb686e2d2",
+          "name": "Limit"
+        },
+        {
+          "parameters": {
+            "promptType": "define",
+            "text": "\"Actuá como el Community Manager de Uronweb. Somos expertos en soporte técnico de servidores Windows/Linux, redes y automatizaciones con n8n. Escribí un caption para un Instagram Reel que sea técnico pero vendedor. Usá un tono profesional y directo. No uses más de 90 palabras. Incluí 15 hashtags específicos del sector (ej: #SysAdmin #n8n #Uronweb). Enfocá el mensaje en que ayudamos a empresas a escalar con tecnología estable.\" ",
+            "batching": {}
+          },
+          "type": "@n8n/n8n-nodes-langchain.chainLlm",
+          "typeVersion": 1.7,
+          "position": [
+            -112,
+            -112
+          ],
+          "id": "73f458c9-560e-41d1-9c4a-087b02429e51",
+          "name": "Basic LLM Chain"
+        },
+        {
+          "parameters": {
+            "options": {}
+          },
+          "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+          "typeVersion": 1,
+          "position": [
+            -192,
+            96
+          ],
+          "id": "3989f1cb-75c7-44c5-98fa-9d8f86bc3d7c",
+          "name": "Google Gemini Chat Model",
+          "credentials": {
+            "googlePalmApi": {
+              "id": "YEGj3HYtTly91ene",
+              "name": "Google Gemini(PaLM) Api account"
+            }
+          }
+        },
+        {
+          "parameters": {
+            "fileSelector": "C:\\Users\\Administrador\\.n8n-files\\instagram_pendiente\\*.mp4",
+            "options": {}
+          },
+          "type": "n8n-nodes-base.readWriteFile",
+          "typeVersion": 1.1,
+          "position": [
+            -784,
+            0
+          ],
+          "id": "51abd5b4-d417-4c55-9750-c71aac5b8b01",
+          "name": "Read/Write Files from Disk1"
+        },
+        {
+          "parameters": {
+            "amount": 70
+          },
+          "type": "n8n-nodes-base.wait",
+          "typeVersion": 1.1,
+          "position": [
+            512,
+            -16
+          ],
+          "id": "34516bb8-4755-474d-9742-cbdade899f21",
+          "name": "Wait",
+          "webhookId": "050ed6fb-6911-4854-a1c2-0c2ffd876e32"
+        },
+        {
+          "parameters": {
+            "method": "POST",
+            "url": "https://graph.facebook.com/v24.0/17841478077629622/media",
+            "sendBody": true,
+            "bodyParameters": {
+              "parameters": [
+                {
+                  "name": "video_url",
+                  "value": "http://iragui.ddns.net/publico/post_uronweb.mp4"
+                },
+                {
+                  "name": "media_type",
+                  "value": "REELS"
+                },
+                {
+                  "name": "caption",
+                  "value": "={{ $json.text }}"
+                },
+                {
+                  "name": "access_token",
+                  "value": "EAATl3ZAn2MksBQuKXDGcGkO7dAXmPztqiRaTA2IJafn7QkGsJdmVsQHSOLDDKErVC7KFm6AC4YjG8XGUKBkuZAvl4fQceeYrVoBR9cMYndzgkMCokJMMZAXLZCjMBDD7xZC8tZACzIyFZAgJdmnGMNd9DOVCedfFFfZCoretAgUZCP8F3KDC28mYwME6hzuNUESbXTueQvS3zCbiiezBe5EXKBTo0IXFiOLqaouXZCYGymS7CYLQZDZD"
+                }
+              ]
+            },
+            "options": {}
+          },
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.3,
+          "position": [
+            288,
+            -112
+          ],
+          "id": "2c6d4d32-1c02-4a0b-bd5f-e5a76b9df632",
+          "name": "HTTP Request POST /media"
+        },
+        {
+          "parameters": {
+            "method": "POST",
+            "url": "https://graph.facebook.com/v24.0/17841478077629622/media_publish",
+            "sendQuery": true,
+            "queryParameters": {
+              "parameters": [
+                {
+                  "name": "access_token",
+                  "value": "EAATl3ZAn2MksBQuKXDGcGkO7dAXmPztqiRaTA2IJafn7QkGsJdmVsQHSOLDDKErVC7KFm6AC4YjG8XGUKBkuZAvl4fQceeYrVoBR9cMYndzgkMCokJMMZAXLZCjMBDD7xZC8tZACzIyFZAgJdmnGMNd9DOVCedfFFfZCoretAgUZCP8F3KDC28mYwME6hzuNUESbXTueQvS3zCbiiezBe5EXKBTo0IXFiOLqaouXZCYGymS7CYLQZDZD"
+                },
+                {
+                  "name": "creation_id",
+                  "value": "={{ $json.id }}"
+                }
+              ]
+            },
+            "options": {}
+          },
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.3,
+          "position": [
+            672,
+            -112
+          ],
+          "id": "0da4c57e-4f7c-4a22-9103-57c734e6803a",
+          "name": "HTTP Request /media_publish"
+        }
+      ],
+      "connections": {
+        "Schedule Trigger": {
+          "main": [
+            [
+              {
+                "node": "Read/Write Files from Disk1",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Read/Write Files from Disk": {
+          "main": [
+            [
+              {
+                "node": "Limit",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Limit": {
+          "main": [
+            [
+              {
+                "node": "Basic LLM Chain",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Google Gemini Chat Model": {
+          "ai_languageModel": [
+            [
+              {
+                "node": "Basic LLM Chain",
+                "type": "ai_languageModel",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Basic LLM Chain": {
+          "main": [
+            [
+              {
+                "node": "HTTP Request POST /media",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Read/Write Files from Disk1": {
+          "main": [
+            [
+              {
+                "node": "Read/Write Files from Disk",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Wait": {
+          "main": [
+            [
+              {
+                "node": "HTTP Request /media_publish",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "HTTP Request POST /media": {
+          "main": [
+            [
+              {
+                "node": "Wait",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "HTTP Request /media_publish": {
+          "main": [
+            []
+          ]
+        }
+      },
+      "authors": "Gastón Iragui",
+      "name": "Version 73c46f09",
+      "description": "",
+      "autosaved": false
+    },
+    "tags": []
+  },
+  {
+    "updatedAt": "2025-12-28T01:10:36.948Z",
+    "createdAt": "2025-12-28T00:45:30.576Z",
+    "id": "euK7owWZegCJdof5",
+    "name": "webs ONLINE?",
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "hours",
+                "hoursInterval": 6
+              }
+            ]
+          }
+        },
+        "id": "1bb6832f-ae7b-429d-89b2-e6b5b008c3a8",
+        "name": "Cada 15 min",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          -640,
+          160
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://uronweb.site",
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true
+              }
+            }
+          }
+        },
+        "id": "ec01b5f9-7486-44c4-a86b-c5af2a7001cf",
+        "name": "Check UronWeb (Hostinger)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          -304,
+          -80
+        ],
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "url": "https://iragui.ddns.net",
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true
+              }
+            }
+          }
+        },
+        "id": "3879f8e2-e94d-4135-88f5-3ac6b65036fd",
+        "name": "Check Home Server",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          -240,
+          320
+        ],
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "number": [
+              {
+                "value1": "={{ $json.statusCode }}",
+                "operation": "notEqual",
+                "value2": 200
+              }
+            ]
+          }
+        },
+        "id": "b89eb691-a2ab-47c8-8a91-b1cb696a14fa",
+        "name": "¿UronWeb Caído?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 1,
+        "position": [
+          64,
+          -32
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "number": [
+              {
+                "value1": "={{ $json.statusCode }}",
+                "operation": "notEqual",
+                "value2": 200
+              }
+            ]
+          }
+        },
+        "id": "3d159e3c-9928-452d-95e2-88455102b063",
+        "name": "¿Home Server Caído?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 1,
+        "position": [
+          80,
+          272
+        ]
+      },
+      {
+        "parameters": {
+          "chatId": "1680318803",
+          "text": "🚨 **ALERTA CRÍTICA** 🚨\n\nEl sitio **UronWeb** (Hostinger) no responde.\nStatus Code: {{ $json.statusCode }}\nRevisar panel de hosting.",
+          "additionalFields": {}
+        },
+        "id": "bb45dfe9-82bd-4b47-a92d-44c6f926b288",
+        "name": "Telegram UronWeb",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.1,
+        "position": [
+          464,
+          -112
+        ],
+        "webhookId": "9bdb4e2f-97b3-4605-9b65-8eeffb9b859d",
+        "credentials": {
+          "telegramApi": {
+            "id": "TrmkTaUMNEUaBB1m",
+            "name": "Telegram account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "chatId": "1680318803",
+          "text": "⚠️ **ALERTA HOME SERVER** ⚠️\n\nEl sitio **iragui.ddns.net** no responde.\nStatus Code: {{ $json.statusCode }}\nPosible corte de luz o servicio Caddy caído.",
+          "additionalFields": {}
+        },
+        "id": "26d3dc1d-0a16-4307-8cc5-bd56f2147ee8",
+        "name": "Telegram Home Server",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.1,
+        "position": [
+          496,
+          224
+        ],
+        "webhookId": "f1b40cf6-76a4-4aea-8d88-aa5822ba3e4e",
+        "credentials": {
+          "telegramApi": {
+            "id": "TrmkTaUMNEUaBB1m",
+            "name": "Telegram account"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Cada 15 min": {
+        "main": [
+          [
+            {
+              "node": "Check UronWeb (Hostinger)",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Check Home Server",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check UronWeb (Hostinger)": {
+        "main": [
+          [
+            {
+              "node": "¿UronWeb Caído?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check Home Server": {
+        "main": [
+          [
+            {
+              "node": "¿Home Server Caído?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "¿UronWeb Caído?": {
+        "main": [
+          [
+            {
+              "node": "Telegram UronWeb",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "¿Home Server Caído?": {
+        "main": [
+          [
+            {
+              "node": "Telegram Home Server",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": {
+      "node:Cada 15 min": {
+        "recurrenceRules": [
+          6
+        ]
+      }
+    },
+    "meta": {
+      "templateCredsSetupCompleted": true
+    },
+    "pinData": {},
+    "versionId": "15ca34a3-9718-4854-9b1f-b5a4d304dbad",
+    "activeVersionId": "15ca34a3-9718-4854-9b1f-b5a4d304dbad",
+    "triggerCount": 1,
+    "shared": [
+      {
+        "updatedAt": "2025-12-28T00:45:30.591Z",
+        "createdAt": "2025-12-28T00:45:30.591Z",
+        "role": "workflow:owner",
+        "workflowId": "euK7owWZegCJdof5",
+        "projectId": "3bfyiwZiLwsnaqI0"
+      }
+    ],
+    "activeVersion": {
+      "updatedAt": "2025-12-28T01:10:39.000Z",
+      "createdAt": "2025-12-28T01:10:36.947Z",
+      "versionId": "15ca34a3-9718-4854-9b1f-b5a4d304dbad",
+      "workflowId": "euK7owWZegCJdof5",
+      "nodes": [
+        {
+          "parameters": {
+            "rule": {
+              "interval": [
+                {
+                  "field": "hours",
+                  "hoursInterval": 6
+                }
+              ]
+            }
+          },
+          "id": "1bb6832f-ae7b-429d-89b2-e6b5b008c3a8",
+          "name": "Cada 15 min",
+          "type": "n8n-nodes-base.scheduleTrigger",
+          "typeVersion": 1.1,
+          "position": [
+            -640,
+            160
+          ]
+        },
+        {
+          "parameters": {
+            "url": "https://uronweb.site",
+            "options": {
+              "response": {
+                "response": {
+                  "fullResponse": true
+                }
+              }
+            }
+          },
+          "id": "ec01b5f9-7486-44c4-a86b-c5af2a7001cf",
+          "name": "Check UronWeb (Hostinger)",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.1,
+          "position": [
+            -304,
+            -80
+          ],
+          "continueOnFail": true
+        },
+        {
+          "parameters": {
+            "url": "https://iragui.ddns.net",
+            "options": {
+              "response": {
+                "response": {
+                  "fullResponse": true
+                }
+              }
+            }
+          },
+          "id": "3879f8e2-e94d-4135-88f5-3ac6b65036fd",
+          "name": "Check Home Server",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.1,
+          "position": [
+            -240,
+            320
+          ],
+          "continueOnFail": true
+        },
+        {
+          "parameters": {
+            "conditions": {
+              "number": [
+                {
+                  "value1": "={{ $json.statusCode }}",
+                  "operation": "notEqual",
+                  "value2": 200
+                }
+              ]
+            }
+          },
+          "id": "b89eb691-a2ab-47c8-8a91-b1cb696a14fa",
+          "name": "¿UronWeb Caído?",
+          "type": "n8n-nodes-base.if",
+          "typeVersion": 1,
+          "position": [
+            64,
+            -32
+          ]
+        },
+        {
+          "parameters": {
+            "conditions": {
+              "number": [
+                {
+                  "value1": "={{ $json.statusCode }}",
+                  "operation": "notEqual",
+                  "value2": 200
+                }
+              ]
+            }
+          },
+          "id": "3d159e3c-9928-452d-95e2-88455102b063",
+          "name": "¿Home Server Caído?",
+          "type": "n8n-nodes-base.if",
+          "typeVersion": 1,
+          "position": [
+            80,
+            272
+          ]
+        },
+        {
+          "parameters": {
+            "chatId": "1680318803",
+            "text": "🚨 **ALERTA CRÍTICA** 🚨\n\nEl sitio **UronWeb** (Hostinger) no responde.\nStatus Code: {{ $json.statusCode }}\nRevisar panel de hosting.",
+            "additionalFields": {}
+          },
+          "id": "bb45dfe9-82bd-4b47-a92d-44c6f926b288",
+          "name": "Telegram UronWeb",
+          "type": "n8n-nodes-base.telegram",
+          "typeVersion": 1.1,
+          "position": [
+            464,
+            -112
+          ],
+          "webhookId": "9bdb4e2f-97b3-4605-9b65-8eeffb9b859d",
+          "credentials": {
+            "telegramApi": {
+              "id": "TrmkTaUMNEUaBB1m",
+              "name": "Telegram account"
+            }
+          }
+        },
+        {
+          "parameters": {
+            "chatId": "1680318803",
+            "text": "⚠️ **ALERTA HOME SERVER** ⚠️\n\nEl sitio **iragui.ddns.net** no responde.\nStatus Code: {{ $json.statusCode }}\nPosible corte de luz o servicio Caddy caído.",
+            "additionalFields": {}
+          },
+          "id": "26d3dc1d-0a16-4307-8cc5-bd56f2147ee8",
+          "name": "Telegram Home Server",
+          "type": "n8n-nodes-base.telegram",
+          "typeVersion": 1.1,
+          "position": [
+            496,
+            224
+          ],
+          "webhookId": "f1b40cf6-76a4-4aea-8d88-aa5822ba3e4e",
+          "credentials": {
+            "telegramApi": {
+              "id": "TrmkTaUMNEUaBB1m",
+              "name": "Telegram account"
+            }
+          }
+        }
+      ],
+      "connections": {
+        "Cada 15 min": {
+          "main": [
+            [
+              {
+                "node": "Check UronWeb (Hostinger)",
+                "type": "main",
+                "index": 0
+              },
+              {
+                "node": "Check Home Server",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Check UronWeb (Hostinger)": {
+          "main": [
+            [
+              {
+                "node": "¿UronWeb Caído?",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Check Home Server": {
+          "main": [
+            [
+              {
+                "node": "¿Home Server Caído?",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "¿UronWeb Caído?": {
+          "main": [
+            [
+              {
+                "node": "Telegram UronWeb",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "¿Home Server Caído?": {
+          "main": [
+            [
+              {
+                "node": "Telegram Home Server",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "authors": "Gastón Iragui",
+      "name": "Version 15ca34a3",
+      "description": "",
+      "autosaved": false
+    },
+    "tags": []
+  },
+  {
+    "updatedAt": "2026-01-09T10:53:24.279Z",
+    "createdAt": "2025-12-19T23:53:40.022Z",
+    "id": "jqgfUXbenkuTqyup",
+    "name": "Uronbot",
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+      {
+        "parameters": {
+          "public": true,
+          "initialMessages": "¡Hola! Soy UronBot 🤖. ¿En qué puedo ayudarte hoy con tus servidores o sistemas?",
+          "options": {
+            "allowedOrigins": "*",
+            "inputPlaceholder": "Escribí tu consulta acá...",
+            "subtitle": "Tu asistente virtual 24/7 para consultas técnicas y servidores.",
+            "title": "¡Hola! Soy UronBot 🤖"
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+        "typeVersion": 1.4,
+        "position": [
+          -416,
+          -128
+        ],
+        "id": "5bd0ac81-b935-4ca1-94d5-7efaa9544386",
+        "name": "When chat message received",
+        "webhookId": "0491c79d-cf2b-4f06-8681-ca7bf6d0105d"
+      },
+      {
+        "parameters": {
+          "options": {
+            "systemMessage": "=## ROL\nEres \"UronBot\", el Gestor de Incidencias Inteligente de UronWeb. Tu función es actuar como puente entre el cliente y nuestra base de datos de averías (tanto de servicios web como de reparación de equipos informáticos/PC) y registrar tickets de incidencia.\n\n## HERRAMIENTAS DISPONIBLES (Obligatorio usarlas)\n\n1. herramienta: “consultar_faq”\n   - Uso: Úsala SIEMPRE que el usuario tenga una duda técnica, una pregunta sobre el servicio o problemas con su PC/Servidor.\n   - Acción: Busca en el archivo de Google Sheets llamado \"UronBot_Base_Conocimiento\" (hoja \"FAQ\") la respuesta más relevante.\n   - Instrucción: No inventes respuestas. Si la herramienta no devuelve una solución clara en ese archivo, procede al \"Protocolo de Escalación\".\n\n2. herramienta: “registrar_ticket”\n   - Uso: Úsala cuando el problema sea grave (humo, chispas, errores críticos, pantallazos azules), si el usuario pide explícitamente un técnico o quiere contratar una reparación.\n   - Pregunta:\n      * Nombre Cliente\n      * Correo Electrónico\n      * Descripción de la Incidencia (Resumen técnico del problema del PC o Web)\n   -Otros parámetros necesarios para crear el ticket:\n      * Estado Incidencia: \"Pendiente\"\n      * Tipo de Servicio: (Clasificar obligatoriamente en uno de estos: Reparación de PC, Mantenimiento Web, Urgencia o Otros)\n      * Prioridad de Respuesta: (Clasificar en: ALTA, MEDIA o BAJA según la gravedad)\n\n## FLUJO DE TRABAJO\n1. El usuario pregunta.\n2. LLAMAS a “consultar_faq” para buscar en \"UronBot_Base_Conocimiento\".\n3. Si hay solución: Responde de forma breve y amable por WhatsApp.\n4. Si NO hay solución o es una emergencia: Pide Nombre y Correo, y luego LLAMAS a “registrar_ticket”.\n\n## REGLAS DE ORO\n- Respuesta corta (formato WhatsApp).\n- Formato simple (sin asteriscos, sin hashtags).\n- Nunca digas \"estoy buscando en un Excel\", di \"he consultado nuestro manual técnico\".\n- Mantén el tono profesional y usa emojis sin excederte (🔧, 💻).\n\n\"NO uses la herramienta 'registrar_ticket' hasta que el usuario te haya dado explícitamente su nombre y correo. Si faltan datos, pídelos primero.\""
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 3,
+        "position": [
+          -144,
+          -128
+        ],
+        "id": "3bf76ddb-552f-49ee-8590-017b05a08aab",
+        "name": "AI Agent"
+      },
+      {
+        "parameters": {
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+        "typeVersion": 1,
+        "position": [
+          -240,
+          208
+        ],
+        "id": "214cb3b0-5fa4-49d9-a6d9-01fb4748885d",
+        "name": "Google Gemini Chat Model",
+        "credentials": {
+          "googlePalmApi": {
+            "id": "YEGj3HYtTly91ene",
+            "name": "Google Gemini(PaLM) Api account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "contextWindowLength": 10
+        },
+        "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+        "typeVersion": 1.3,
+        "position": [
+          -80,
+          176
+        ],
+        "id": "cdd9578f-e63a-4211-b36a-4db7e5c65c6e",
+        "name": "Simple Memory"
+      },
+      {
+        "parameters": {
+          "descriptionType": "manual",
+          "toolDescription": "Busca en la base de datos de preguntas frecuentes respuestas a problemas técnicos.",
+          "documentId": {
+            "__rl": true,
+            "value": "1VPWp6L6sysjIvUnq6KfneyCAWg8yXrlUHd7wWF1RTAE",
+            "mode": "list",
+            "cachedResultName": "UronBot_Base_Conocimiento",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1VPWp6L6sysjIvUnq6KfneyCAWg8yXrlUHd7wWF1RTAE/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "gid=0",
+            "mode": "list",
+            "cachedResultName": "Hoja 1",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1VPWp6L6sysjIvUnq6KfneyCAWg8yXrlUHd7wWF1RTAE/edit#gid=0"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheetsTool",
+        "typeVersion": 4.7,
+        "position": [
+          96,
+          208
+        ],
+        "id": "8357611b-a1b1-4837-b745-c34b572d9617",
+        "name": "consultar_faq",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "QsmF1j7kX4jDYD0x",
+            "name": "Google Sheets account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "descriptionType": "manual",
+          "toolDescription": "Registra un nuevo ticket de soporte. Argumentos obligatorios: fecha, nombre, correo, problema, prioridad, estado.",
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "value": "11y9FiNKzyY7IMZOWzCpUXzMz_0w5E8HJovGS7BEVQO0",
+            "mode": "list",
+            "cachedResultName": "UronBot_Base_Conocimiento_ticket",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11y9FiNKzyY7IMZOWzCpUXzMz_0w5E8HJovGS7BEVQO0/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "gid=0",
+            "mode": "list",
+            "cachedResultName": "Tickets",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11y9FiNKzyY7IMZOWzCpUXzMz_0w5E8HJovGS7BEVQO0/edit#gid=0"
+          },
+          "columns": {
+            "mappingMode": "autoMapInputData",
+            "value": {
+              "fecha": "={{ $now.minus({hours: -2}).toFormat('dd/MM/yyyy HH:mm') }}",
+              "problema": "=",
+              "prioridad": "=",
+              "estado": "=",
+              "nombre": "=",
+              "correo": "="
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "fecha",
+                "displayName": "fecha",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "nombre",
+                "displayName": "nombre",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "correo",
+                "displayName": "correo",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "problema",
+                "displayName": "problema",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "prioridad",
+                "displayName": "prioridad",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "estado",
+                "displayName": "estado",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "sessionId",
+                "displayName": "sessionId",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "action",
+                "displayName": "action",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "chatInput",
+                "displayName": "chatInput",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "tipo_de_servicio",
+                "displayName": "tipo_de_servicio",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "estado_incidencia",
+                "displayName": "estado_incidencia",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "prioridad_de_respuesta",
+                "displayName": "prioridad_de_respuesta",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "descripcion_incidencia",
+                "displayName": "descripcion_incidencia",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "toolCallId",
+                "displayName": "toolCallId",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "prioridad_respuesta",
+                "displayName": "prioridad_respuesta",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "tipo_servicio",
+                "displayName": "tipo_servicio",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheetsTool",
+        "typeVersion": 4.7,
+        "position": [
+          288,
+          176
+        ],
+        "id": "4a800e52-205c-426a-aa5f-796be55cf2dc",
+        "name": "registrar_ticket",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "QsmF1j7kX4jDYD0x",
+            "name": "Google Sheets account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "chatId": "1680318803",
+          "text": "=👤 Cliente: {{ $json.nombre_cliente }} 📧 Email: {{ $json.correo_electronico }} 📝 Falla: {{ $json.descripcion_incidencia }} ⚠️ Prioridad: {{ $json.prioridad_de_respuesta }}",
+          "additionalFields": {}
+        },
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2,
+        "position": [
+          272,
+          -112
+        ],
+        "id": "f90bcb3a-4545-4d87-bb91-ac2eb82cf56e",
+        "name": "Send a text message",
+        "webhookId": "f8a7c9d4-25c9-4593-92a4-14b29e90a744",
+        "credentials": {
+          "telegramApi": {
+            "id": "TrmkTaUMNEUaBB1m",
+            "name": "Telegram account"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "When chat message received": {
+        "main": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Google Gemini Chat Model": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Simple Memory": {
+        "ai_memory": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "ai_memory",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "consultar_faq": {
+        "ai_tool": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "registrar_ticket": {
+        "ai_tool": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "AI Agent": {
+        "main": [
+          []
+        ]
+      },
+      "Send a text message": {
+        "main": [
+          []
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null,
+    "meta": {
+      "templateCredsSetupCompleted": true
+    },
+    "pinData": {},
+    "versionId": "6fa8a917-37e7-4e13-8b44-5d0d0a254586",
+    "activeVersionId": "6fa8a917-37e7-4e13-8b44-5d0d0a254586",
+    "triggerCount": 1,
+    "shared": [
+      {
+        "updatedAt": "2025-12-19T23:53:40.022Z",
+        "createdAt": "2025-12-19T23:53:40.022Z",
+        "role": "workflow:owner",
+        "workflowId": "jqgfUXbenkuTqyup",
+        "projectId": "3bfyiwZiLwsnaqI0"
+      }
+    ],
+    "activeVersion": {
+      "updatedAt": "2026-01-09T10:47:07.000Z",
+      "createdAt": "2026-01-09T10:47:04.634Z",
+      "versionId": "6fa8a917-37e7-4e13-8b44-5d0d0a254586",
+      "workflowId": "jqgfUXbenkuTqyup",
+      "nodes": [
+        {
+          "parameters": {
+            "public": true,
+            "initialMessages": "¡Hola! Soy UronBot 🤖. ¿En qué puedo ayudarte hoy con tus servidores o sistemas?",
+            "options": {
+              "allowedOrigins": "*",
+              "inputPlaceholder": "Escribí tu consulta acá...",
+              "subtitle": "Tu asistente virtual 24/7 para consultas técnicas y servidores.",
+              "title": "¡Hola! Soy UronBot 🤖"
+            }
+          },
+          "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+          "typeVersion": 1.4,
+          "position": [
+            -416,
+            -128
+          ],
+          "id": "5bd0ac81-b935-4ca1-94d5-7efaa9544386",
+          "name": "When chat message received",
+          "webhookId": "0491c79d-cf2b-4f06-8681-ca7bf6d0105d"
+        },
+        {
+          "parameters": {
+            "options": {
+              "systemMessage": "=## ROL\nEres \"UronBot\", el Gestor de Incidencias Inteligente de UronWeb. Tu función es actuar como puente entre el cliente y nuestra base de datos de averías (tanto de servicios web como de reparación de equipos informáticos/PC) y registrar tickets de incidencia.\n\n## HERRAMIENTAS DISPONIBLES (Obligatorio usarlas)\n\n1. herramienta: “consultar_faq”\n   - Uso: Úsala SIEMPRE que el usuario tenga una duda técnica, una pregunta sobre el servicio o problemas con su PC/Servidor.\n   - Acción: Busca en el archivo de Google Sheets llamado \"UronBot_Base_Conocimiento\" (hoja \"FAQ\") la respuesta más relevante.\n   - Instrucción: No inventes respuestas. Si la herramienta no devuelve una solución clara en ese archivo, procede al \"Protocolo de Escalación\".\n\n2. herramienta: “registrar_ticket”\n   - Uso: Úsala cuando el problema sea grave (humo, chispas, errores críticos, pantallazos azules), si el usuario pide explícitamente un técnico o quiere contratar una reparación.\n   - Pregunta:\n      * Nombre Cliente\n      * Correo Electrónico\n      * Descripción de la Incidencia (Resumen técnico del problema del PC o Web)\n   -Otros parámetros necesarios para crear el ticket:\n      * Estado Incidencia: \"Pendiente\"\n      * Tipo de Servicio: (Clasificar obligatoriamente en uno de estos: Reparación de PC, Mantenimiento Web, Urgencia o Otros)\n      * Prioridad de Respuesta: (Clasificar en: ALTA, MEDIA o BAJA según la gravedad)\n\n## FLUJO DE TRABAJO\n1. El usuario pregunta.\n2. LLAMAS a “consultar_faq” para buscar en \"UronBot_Base_Conocimiento\".\n3. Si hay solución: Responde de forma breve y amable por WhatsApp.\n4. Si NO hay solución o es una emergencia: Pide Nombre y Correo, y luego LLAMAS a “registrar_ticket”.\n\n## REGLAS DE ORO\n- Respuesta corta (formato WhatsApp).\n- Formato simple (sin asteriscos, sin hashtags).\n- Nunca digas \"estoy buscando en un Excel\", di \"he consultado nuestro manual técnico\".\n- Mantén el tono profesional y usa emojis sin excederte (🔧, 💻).\n\n\"NO uses la herramienta 'registrar_ticket' hasta que el usuario te haya dado explícitamente su nombre y correo. Si faltan datos, pídelos primero.\""
+            }
+          },
+          "type": "@n8n/n8n-nodes-langchain.agent",
+          "typeVersion": 3,
+          "position": [
+            -144,
+            -128
+          ],
+          "id": "3bf76ddb-552f-49ee-8590-017b05a08aab",
+          "name": "AI Agent"
+        },
+        {
+          "parameters": {
+            "options": {}
+          },
+          "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+          "typeVersion": 1,
+          "position": [
+            -240,
+            208
+          ],
+          "id": "214cb3b0-5fa4-49d9-a6d9-01fb4748885d",
+          "name": "Google Gemini Chat Model",
+          "credentials": {
+            "googlePalmApi": {
+              "id": "YEGj3HYtTly91ene",
+              "name": "Google Gemini(PaLM) Api account"
+            }
+          }
+        },
+        {
+          "parameters": {
+            "contextWindowLength": 10
+          },
+          "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+          "typeVersion": 1.3,
+          "position": [
+            -80,
+            176
+          ],
+          "id": "cdd9578f-e63a-4211-b36a-4db7e5c65c6e",
+          "name": "Simple Memory"
+        },
+        {
+          "parameters": {
+            "descriptionType": "manual",
+            "toolDescription": "Busca en la base de datos de preguntas frecuentes respuestas a problemas técnicos.",
+            "documentId": {
+              "__rl": true,
+              "value": "1VPWp6L6sysjIvUnq6KfneyCAWg8yXrlUHd7wWF1RTAE",
+              "mode": "list",
+              "cachedResultName": "UronBot_Base_Conocimiento",
+              "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1VPWp6L6sysjIvUnq6KfneyCAWg8yXrlUHd7wWF1RTAE/edit?usp=drivesdk"
+            },
+            "sheetName": {
+              "__rl": true,
+              "value": "gid=0",
+              "mode": "list",
+              "cachedResultName": "Hoja 1",
+              "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1VPWp6L6sysjIvUnq6KfneyCAWg8yXrlUHd7wWF1RTAE/edit#gid=0"
+            },
+            "options": {}
+          },
+          "type": "n8n-nodes-base.googleSheetsTool",
+          "typeVersion": 4.7,
+          "position": [
+            96,
+            208
+          ],
+          "id": "8357611b-a1b1-4837-b745-c34b572d9617",
+          "name": "consultar_faq",
+          "credentials": {
+            "googleSheetsOAuth2Api": {
+              "id": "QsmF1j7kX4jDYD0x",
+              "name": "Google Sheets account"
+            }
+          }
+        },
+        {
+          "parameters": {
+            "descriptionType": "manual",
+            "toolDescription": "Registra un nuevo ticket de soporte. Argumentos obligatorios: fecha, nombre, correo, problema, prioridad, estado.",
+            "operation": "append",
+            "documentId": {
+              "__rl": true,
+              "value": "11y9FiNKzyY7IMZOWzCpUXzMz_0w5E8HJovGS7BEVQO0",
+              "mode": "list",
+              "cachedResultName": "UronBot_Base_Conocimiento_ticket",
+              "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11y9FiNKzyY7IMZOWzCpUXzMz_0w5E8HJovGS7BEVQO0/edit?usp=drivesdk"
+            },
+            "sheetName": {
+              "__rl": true,
+              "value": "gid=0",
+              "mode": "list",
+              "cachedResultName": "Tickets",
+              "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11y9FiNKzyY7IMZOWzCpUXzMz_0w5E8HJovGS7BEVQO0/edit#gid=0"
+            },
+            "columns": {
+              "mappingMode": "autoMapInputData",
+              "value": {
+                "fecha": "={{ $now.minus({hours: -2}).toFormat('dd/MM/yyyy HH:mm') }}",
+                "problema": "=",
+                "prioridad": "=",
+                "estado": "=",
+                "nombre": "=",
+                "correo": "="
+              },
+              "matchingColumns": [],
+              "schema": [
+                {
+                  "id": "fecha",
+                  "displayName": "fecha",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "nombre",
+                  "displayName": "nombre",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "correo",
+                  "displayName": "correo",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "problema",
+                  "displayName": "problema",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "prioridad",
+                  "displayName": "prioridad",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "estado",
+                  "displayName": "estado",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "sessionId",
+                  "displayName": "sessionId",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "action",
+                  "displayName": "action",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "chatInput",
+                  "displayName": "chatInput",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "tipo_de_servicio",
+                  "displayName": "tipo_de_servicio",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "estado_incidencia",
+                  "displayName": "estado_incidencia",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "prioridad_de_respuesta",
+                  "displayName": "prioridad_de_respuesta",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "descripcion_incidencia",
+                  "displayName": "descripcion_incidencia",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "toolCallId",
+                  "displayName": "toolCallId",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "prioridad_respuesta",
+                  "displayName": "prioridad_respuesta",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "tipo_servicio",
+                  "displayName": "tipo_servicio",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                }
+              ],
+              "attemptToConvertTypes": false,
+              "convertFieldsToString": false
+            },
+            "options": {}
+          },
+          "type": "n8n-nodes-base.googleSheetsTool",
+          "typeVersion": 4.7,
+          "position": [
+            288,
+            176
+          ],
+          "id": "4a800e52-205c-426a-aa5f-796be55cf2dc",
+          "name": "registrar_ticket",
+          "credentials": {
+            "googleSheetsOAuth2Api": {
+              "id": "QsmF1j7kX4jDYD0x",
+              "name": "Google Sheets account"
+            }
+          }
+        },
+        {
+          "parameters": {
+            "chatId": "1680318803",
+            "text": "=👤 Cliente: {{ $json.nombre_cliente }} 📧 Email: {{ $json.correo_electronico }} 📝 Falla: {{ $json.descripcion_incidencia }} ⚠️ Prioridad: {{ $json.prioridad_de_respuesta }}",
+            "additionalFields": {}
+          },
+          "type": "n8n-nodes-base.telegram",
+          "typeVersion": 1.2,
+          "position": [
+            272,
+            -112
+          ],
+          "id": "f90bcb3a-4545-4d87-bb91-ac2eb82cf56e",
+          "name": "Send a text message",
+          "webhookId": "f8a7c9d4-25c9-4593-92a4-14b29e90a744",
+          "credentials": {
+            "telegramApi": {
+              "id": "TrmkTaUMNEUaBB1m",
+              "name": "Telegram account"
+            }
+          }
+        }
+      ],
+      "connections": {
+        "When chat message received": {
+          "main": [
+            [
+              {
+                "node": "AI Agent",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Google Gemini Chat Model": {
+          "ai_languageModel": [
+            [
+              {
+                "node": "AI Agent",
+                "type": "ai_languageModel",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Simple Memory": {
+          "ai_memory": [
+            [
+              {
+                "node": "AI Agent",
+                "type": "ai_memory",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "consultar_faq": {
+          "ai_tool": [
+            [
+              {
+                "node": "AI Agent",
+                "type": "ai_tool",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "registrar_ticket": {
+          "ai_tool": [
+            [
+              {
+                "node": "AI Agent",
+                "type": "ai_tool",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "AI Agent": {
+          "main": [
+            []
+          ]
+        },
+        "Send a text message": {
+          "main": [
+            []
+          ]
+        }
+      },
+      "authors": "Gastón Iragui",
+      "name": "Version 6fa8a917",
+      "description": "",
+      "autosaved": false
+    },
+    "tags": []
+  }
+]

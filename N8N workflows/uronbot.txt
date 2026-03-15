@@ -1,0 +1,407 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "initialMessages": "¡Hola! Soy UronBot 🤖. ¿En qué puedo ayudarte hoy con tus servidores o sistemas?",
+        "options": {
+          "allowedOrigins": "*",
+          "inputPlaceholder": "Escribí tu consulta acá...",
+          "subtitle": "Tu asistente virtual 24/7 para consultas técnicas y servidores.",
+          "title": "¡Hola! Soy UronBot 🤖"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -416,
+        -128
+      ],
+      "id": "5bd0ac81-b935-4ca1-94d5-7efaa9544386",
+      "name": "When chat message received",
+      "webhookId": "0491c79d-cf2b-4f06-8681-ca7bf6d0105d"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=## ROL\nEres \"UronBot\", el Gestor de Incidencias Inteligente de UronWeb. Tu función es actuar como puente entre el cliente y nuestra base de datos de averías (tanto de servicios web como de reparación de equipos informáticos/PC) y registrar tickets de incidencia.\n\n## HERRAMIENTAS DISPONIBLES (Obligatorio usarlas)\n\n1. herramienta: “consultar_faq”\n   - Uso: Úsala SIEMPRE que el usuario tenga una duda técnica, una pregunta sobre el servicio o problemas con su PC/Servidor.\n   - Acción: Busca en el archivo de Google Sheets llamado \"UronBot_Base_Conocimiento\" (hoja \"FAQ\") la respuesta más relevante.\n   - Instrucción: No inventes respuestas. Si la herramienta no devuelve una solución clara en ese archivo, procede al \"Protocolo de Escalación\".\n\n2. herramienta: “registrar_ticket”\n   - Uso: Úsala cuando el problema sea grave (humo, chispas, errores críticos, pantallazos azules), si el usuario pide explícitamente un técnico o quiere contratar una reparación.\n   - Pregunta:\n      * Nombre Cliente\n      * Correo Electrónico\n      * Descripción de la Incidencia (Resumen técnico del problema del PC o Web)\n   -Otros parámetros necesarios para crear el ticket:\n      * Estado Incidencia: \"Pendiente\"\n      * Tipo de Servicio: (Clasificar obligatoriamente en uno de estos: Reparación de PC, Mantenimiento Web, Urgencia o Otros)\n      * Prioridad de Respuesta: (Clasificar en: ALTA, MEDIA o BAJA según la gravedad)\n\n## FLUJO DE TRABAJO\n1. El usuario pregunta.\n2. LLAMAS a “consultar_faq” para buscar en \"UronBot_Base_Conocimiento\".\n3. Si hay solución: Responde de forma breve y amable por WhatsApp.\n4. Si NO hay solución o es una emergencia: Pide Nombre y Correo, y luego LLAMAS a “registrar_ticket”.\n\n## REGLAS DE ORO\n- Respuesta corta (formato WhatsApp).\n- Formato simple (sin asteriscos, sin hashtags).\n- Nunca digas \"estoy buscando en un Excel\", di \"he consultado nuestro manual técnico\".\n- Mantén el tono profesional y usa emojis sin excederte (🔧, 💻).\n\n\"NO uses la herramienta 'registrar_ticket' hasta que el usuario te haya dado explícitamente su nombre y correo. Si faltan datos, pídelos primero.\""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -144,
+        -128
+      ],
+      "id": "3bf76ddb-552f-49ee-8590-017b05a08aab",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        208
+      ],
+      "id": "214cb3b0-5fa4-49d9-a6d9-01fb4748885d",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YEGj3HYtTly91ene",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -80,
+        176
+      ],
+      "id": "cdd9578f-e63a-4211-b36a-4db7e5c65c6e",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Busca en la base de datos de preguntas frecuentes respuestas a problemas técnicos.",
+        "documentId": {
+          "__rl": true,
+          "value": "1VPWp6L6sysjIvUnq6KfneyCAWg8yXrlUHd7wWF1RTAE",
+          "mode": "list",
+          "cachedResultName": "UronBot_Base_Conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1VPWp6L6sysjIvUnq6KfneyCAWg8yXrlUHd7wWF1RTAE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1VPWp6L6sysjIvUnq6KfneyCAWg8yXrlUHd7wWF1RTAE/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        96,
+        208
+      ],
+      "id": "8357611b-a1b1-4837-b745-c34b572d9617",
+      "name": "consultar_faq",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "QsmF1j7kX4jDYD0x",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Registra un nuevo ticket de soporte. Argumentos obligatorios: fecha, nombre, correo, problema, prioridad, estado.",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "11y9FiNKzyY7IMZOWzCpUXzMz_0w5E8HJovGS7BEVQO0",
+          "mode": "list",
+          "cachedResultName": "UronBot_Base_Conocimiento_ticket",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11y9FiNKzyY7IMZOWzCpUXzMz_0w5E8HJovGS7BEVQO0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Tickets",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11y9FiNKzyY7IMZOWzCpUXzMz_0w5E8HJovGS7BEVQO0/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "fecha": "={{ $now.minus({hours: -2}).toFormat('dd/MM/yyyy HH:mm') }}",
+            "problema": "=",
+            "prioridad": "=",
+            "estado": "=",
+            "nombre": "=",
+            "correo": "="
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "fecha",
+              "displayName": "fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nombre",
+              "displayName": "nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "correo",
+              "displayName": "correo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "problema",
+              "displayName": "problema",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "prioridad",
+              "displayName": "prioridad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sessionId",
+              "displayName": "sessionId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "action",
+              "displayName": "action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "chatInput",
+              "displayName": "chatInput",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "tipo_de_servicio",
+              "displayName": "tipo_de_servicio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "estado_incidencia",
+              "displayName": "estado_incidencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "prioridad_de_respuesta",
+              "displayName": "prioridad_de_respuesta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "descripcion_incidencia",
+              "displayName": "descripcion_incidencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "toolCallId",
+              "displayName": "toolCallId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "prioridad_respuesta",
+              "displayName": "prioridad_respuesta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "tipo_servicio",
+              "displayName": "tipo_servicio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        288,
+        176
+      ],
+      "id": "4a800e52-205c-426a-aa5f-796be55cf2dc",
+      "name": "registrar_ticket",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "QsmF1j7kX4jDYD0x",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "1680318803",
+        "text": "=👤 Cliente: {{ $json.nombre_cliente }} 📧 Email: {{ $json.correo_electronico }} 📝 Falla: {{ $json.descripcion_incidencia }} ⚠️ Prioridad: {{ $json.prioridad_de_respuesta }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        272,
+        -112
+      ],
+      "id": "f90bcb3a-4545-4d87-bb91-ac2eb82cf56e",
+      "name": "Send a text message",
+      "webhookId": "f8a7c9d4-25c9-4593-92a4-14b29e90a744",
+      "credentials": {
+        "telegramApi": {
+          "id": "TrmkTaUMNEUaBB1m",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        []
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "consultar_faq": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "registrar_ticket": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3b88cded59cd6d01a088b04b49703440386031617c080194decfb781477eed23"
+  }
+}
